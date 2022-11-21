@@ -19,12 +19,18 @@ class SortableTuple:
             raise ValueError("Tuples must be of same size")
         return SortableTuple._lt_tuples(self._tup, other._tup)
 
+    def __ge__(self, other):
+        return 1 - 1 * self.__lt__(other)
+
     def _lt_tuples(tup1, tup2):
         first_comp = tup1[0] < tup2[0]
         if len(tup1) > 1:
-            equal_comp = tup1[0] = tup2[0]
+            equal_comp = tup1[0] == tup2[0]
             recursive_comp = SortableTuple._lt_tuples(tup1[1:], tup2[1:])
-            return first_comp or (recursive_comp and equal_comp)
+            # first_comp or (recursive_comp and equal_comp)
+            return first_comp + recursive_comp * equal_comp
+            # NB: "+" represent the OR without a negative term (i.e., A or B = A + B - A*B)
+            # because the two terms cannot be true at the same time
         else:
             return first_comp
 
@@ -116,11 +122,10 @@ class SparseMatrixColumn(SecureMatrix):
                 sec_comp_res = res[i - 1][0] == res[i][0] and res[i - 1][1] == res[i][1]
                 res[i][2] = sec_comp_res * res[i - 1][2] + res[i][2]
 
-                res[i - 1][0] = (
-                    sec_comp_res * (-1) + (1 - sec_comp_res) * res[i - 1][0]
-                )  # Only need one placeholder per tuple to make it invalid
+                res[i - 1][0] = mpc.if_else(sec_comp_res, -1, res[i - 1][0])
+                # Only need one placeholder per tuple to make it invalid
 
-            res = mpc.random.shuffle(res)
+            mpc.random.shuffle(res)
 
             final_res = []
             for i in range(len(res)):
@@ -163,8 +168,42 @@ class SparseMatrixRow(SecureMatrix):
 
 
 async def main():
-    # TODO: test shuffle and sort
-    ...
+    secint = mpc.SecInt(64)
+    l = [
+        [secint(2), secint(0), secint(0)],
+        [secint(1), secint(0), secint(0)],
+        [secint(1), secint(2), secint(0)],
+        [secint(1), secint(0), secint(3)],
+    ]
+
+    async def print_mat(mat):
+        for i in range(len(mat)):
+            print(
+                await mpc.output(mat[i][0]),
+                await mpc.output(mat[i][1]),
+                await mpc.output(mat[i][2]),
+            )
+
+    await print_mat(l)
+
+    print("---")
+
+    l_sorted = mpc.sorted(l, SortableTuple)
+
+    await print_mat(l_sorted)
+    print("---")
+
+    mpc.random.shuffle(secint, l_sorted)
+    await print_mat(l_sorted)
+    print("---")
+
+    mpc.random.shuffle(secint, l_sorted)
+    await print_mat(l_sorted)
+    print("---")
+
+    mpc.random.shuffle(secint, l_sorted)
+    await print_mat(l_sorted)
+    print("---")
 
 
 if __name__ == "__main__":
