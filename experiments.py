@@ -20,7 +20,7 @@ class SortableTuple:
         return SortableTuple._lt_tuples(self._tup, other._tup)
 
     def __ge__(self, other):
-        return 1 - 1 * self.__lt__(other)
+        return ~self.__lt__(other)
 
     def _lt_tuples(tup1, tup2):
         first_comp = tup1[0] < tup2[0]
@@ -28,7 +28,7 @@ class SortableTuple:
             equal_comp = tup1[0] == tup2[0]
             recursive_comp = SortableTuple._lt_tuples(tup1[1:], tup2[1:])
             # first_comp or (recursive_comp and equal_comp)
-            return first_comp + recursive_comp * equal_comp
+            return first_comp | (recursive_comp & equal_comp)
             # NB: "+" represent the OR without a negative term (i.e., A or B = A + B - A*B)
             # because the two terms cannot be true at the same time
         else:
@@ -47,6 +47,10 @@ class SecureMatrix:
 
     @abstractmethod
     def dot(self, other):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def print(self):
         raise NotImplementedError
 
 
@@ -69,6 +73,7 @@ class SparseMatrixCOO(SecureMatrix):
                 self._mat.append([to_sec_int(i), to_sec_int(j), to_sec_int(v)])
         elif isinstance(sparse_mat, list):
             assert isinstance(shape, tuple) and len(shape) == 2
+
             for tup in sparse_mat:
                 assert len(tup) == 3
             self._mat = sparse_mat
@@ -80,7 +85,27 @@ class SparseMatrixCOO(SecureMatrix):
         if not isinstance(other, SparseMatrixCOO):
             raise ValueError("Can only multiply SparseMatrixCOO with SparseMatrixCOO")
 
-        # TODO
+        # TODO: execute either multiply-then-sort or sort-then-multiply depending on the sparsity rate
+
+    def __eq__(self, other):
+        if not isinstance(other, SparseMatrixCOO):
+            raise ValueError("Can only compare SparseMatrixCOO with SparseMatrixCOO")
+        if len(self._mat) != len(other._mat):
+            return self.sectype(0)
+        mat1 = mpc.sorted(self._mat, key=SortableTuple)
+        mat2 = mpc.sorted(other._mat, key=SortableTuple)
+        res = self.sectype(1)
+        for i in range(len(self._mat)):
+            res = (
+                res
+                & (mat1[i][0] == mat2[i][0])
+                & (mat1[i][1] == mat2[i][1])
+                & (mat1[i][2] == mat2[i][2])
+            )
+        return res
+
+    def __ne__(self, other):
+        return ~(self.__eq__(other))
 
     async def print(self):
         for i in range(len(self._mat)):
@@ -101,35 +126,40 @@ class SparseMatrixColumn(SecureMatrix):
         to_sec_int = lambda x: self.sectype(int(x))
         self._mat = [[] for i in range(sparse_mat.shape[1])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            print(i, j, v)
             self._mat[j].append((to_sec_int(i), to_sec_int(v)))
 
-    def dot(self, other) -> SparseMatrixCOO:
+    async def dot(self, other) -> SparseMatrixCOO:
         if self.shape[1] != other.shape[0]:
             raise ValueError("Invalid dimensions")
+        if self.sectype != other.sectype:
+            raise ValueError("Incompatible secure types")
 
         if isinstance(other, SparseMatrixRow):
             res = []
-            for _k in range(self.shape[1]):
-                for left_j in range(self.shape[0]):
-                    left_i, left_value = self._mat[left_j]
-                    for right_i in range(other.shape[1]):
-                        right_j, right_value = other._mat[right_i]
+            for k in range(self.shape[1]):
+                for left_i, left_value in self._mat[k]:
+                    for right_j, right_value in other._mat[k]:
+
                         res.append([left_i, right_j, left_value * right_value])
-            res = mpc.sorted(res, key=SortableTuple)
+
+            res = mpc.sorted(res, SortableTuple)
 
             for i in range(1, len(res)):
-                sec_comp_res = res[i - 1][0] == res[i][0] and res[i - 1][1] == res[i][1]
-                res[i][2] = sec_comp_res * res[i - 1][2] + res[i][2]
+                sec_comp_res = (res[i - 1][0] == res[i][0]) & (
+                    res[i - 1][1] == res[i][1]
+                )
+                res[i][2] = mpc.if_else(
+                    sec_comp_res, res[i - 1][2] + res[i][2], res[i][2]
+                )
 
                 res[i - 1][0] = mpc.if_else(sec_comp_res, -1, res[i - 1][0])
                 # Only need one placeholder per tuple to make it invalid
 
-            mpc.random.shuffle(res)
+            mpc.random.shuffle(self.sectype, res)
 
             final_res = []
             for i in range(len(res)):
-                if res[i][0] != -1:
+                if await mpc.output(res[i][0] != -1):
                     final_res.append(res[i])
                 # Here, we leak the number of non-zero elements in the output matrix
 
@@ -137,8 +167,16 @@ class SparseMatrixColumn(SecureMatrix):
                 final_res, sectype=self.sectype, shape=(self.shape[0], other.shape[1])
             )
 
-        else:
-            raise ValueError("Can only multiply SparseMatrixCOO with SparseMatrixCOO")
+        raise ValueError("Can only multiply SparseMatrixColumn with this object")
+
+    async def print(self):
+        for j, col in enumerate(self._mat):
+            print(f"Column {j}: [", end="")
+            for i, val in col:
+                print(
+                    "(", await mpc.output(i), ", ", await mpc.output(val), ")", end=","
+                )
+            print("]")
 
 
 class SparseMatrixRow(SecureMatrix):
@@ -150,60 +188,35 @@ class SparseMatrixRow(SecureMatrix):
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
             self._mat[i].append((to_sec_int(j), to_sec_int(v)))
 
-
-# async def main():
-#     n_dim = 400
-#     secint = mpc.SecInt(64)
-#     x_sparse = scipy.sparse.random(n_dim, n_dim, density=0.1, dtype=np.int16).astype(
-#         int
-#     )
-#     x_dense = x_sparse.todense()
-#     l = np.vectorize(lambda x: secint(int(x)))(x_dense)
-#     l = l.tolist()
-#     print("here")
-#     z = mpc.matrix_prod(l, l)
-#     print(await mpc.output(z[0][0]))
-#     print(await mpc.output(l[0][0]))
-#     print(x_sparse.dot(x_sparse).todense()[0, 0])
+    async def print(self):
+        for i, col in enumerate(self._mat):
+            print(f"Row {i}: [", end="")
+            for j, val in col:
+                print(
+                    "(", await mpc.output(j), ", ", await mpc.output(val), ")", end=","
+                )
+                print("]")
 
 
 async def main():
+    n_dim = 10
     secint = mpc.SecInt(64)
-    l = [
-        [secint(2), secint(0), secint(0)],
-        [secint(1), secint(0), secint(0)],
-        [secint(1), secint(2), secint(0)],
-        [secint(1), secint(0), secint(3)],
-    ]
 
-    async def print_mat(mat):
-        for i in range(len(mat)):
-            print(
-                await mpc.output(mat[i][0]),
-                await mpc.output(mat[i][1]),
-                await mpc.output(mat[i][2]),
-            )
+    x_sparse = scipy.sparse.random(n_dim, n_dim, density=0.3, dtype=np.int16).astype(
+        int
+    )
+    sec_x = SparseMatrixColumn(x_sparse, secint)
+    sec_y = SparseMatrixRow(x_sparse, secint)
+    sec_z = await sec_x.dot(sec_y)
 
-    await print_mat(l)
+    z = x_sparse.dot(x_sparse).tocoo()
+    print("===")
+    await sec_z.print()
+    print("===")
+    print(z)
 
-    print("---")
-
-    l_sorted = mpc.sorted(l, SortableTuple)
-
-    await print_mat(l_sorted)
-    print("---")
-
-    mpc.random.shuffle(secint, l_sorted)
-    await print_mat(l_sorted)
-    print("---")
-
-    mpc.random.shuffle(secint, l_sorted)
-    await print_mat(l_sorted)
-    print("---")
-
-    mpc.random.shuffle(secint, l_sorted)
-    await print_mat(l_sorted)
-    print("---")
+    sec_z_real = SparseMatrixCOO(z, secint)
+    assert await mpc.output(sec_z == sec_z_real)
 
 
 if __name__ == "__main__":
