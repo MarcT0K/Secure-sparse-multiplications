@@ -6,6 +6,8 @@ import scipy.sparse
 
 from mpyc.runtime import mpc
 
+from datetime import datetime
+
 SparseMatrixListType = List[List[int]]
 ScipySparseMatType = scipy.sparse._coo.coo_matrix
 
@@ -198,25 +200,77 @@ class SparseMatrixRow(SecureMatrix):
                 print("]")
 
 
+class DenseMatrix(SecureMatrix):
+    def __init__(self, mat, sectype=None):
+        super().__init__(sectype)
+        if isinstance(mat, list):
+            self._mat = mat
+            self.shape = (len(mat), len(mat[0]))
+        else:
+            self.shape = mat.shape
+            temp_mat = np.vectorize(lambda x: self.sectype(int(x)))(
+                mat
+            )  # TODO: find a way to avoid the hardcoded type
+            self._mat = temp_mat.tolist()
+
+    def dot(self, other):
+        if not isinstance(other, DenseMatrix):
+            raise ValueError("Can only multiply dense with dense")
+
+        return DenseMatrix(mpc.matrix_prod(self._mat, other._mat), sectype=self.sectype)
+
+    async def print(self):
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                print(await mpc.output(self._mat[i][j]), end=" ")
+            print("")
+
+
+# async def main():
+#     n_dim = 400
+#     secint = mpc.SecInt(64)
+#     x_sparse = scipy.sparse.random(n_dim, n_dim, density=0.1, dtype=np.int16).astype(
+#         int
+#     )
+#     x_dense = x_sparse.todense()
+#     l = np.vectorize(lambda x: secint(int(x)))(x_dense)
+#     l = l.tolist()
+#     print("here")
+#     z = mpc.matrix_prod(l, l)
+#     print(await mpc.output(z[0][0]))
+#     print(await mpc.output(l[0][0]))
+#     print(x_sparse.dot(x_sparse).todense()[0, 0])
+
+
 async def main():
-    n_dim = 10
+    n_dim = 300
     secint = mpc.SecInt(64)
 
-    x_sparse = scipy.sparse.random(n_dim, n_dim, density=0.3, dtype=np.int16).astype(
+    x_sparse = scipy.sparse.random(n_dim, n_dim, density=0.001, dtype=np.int16).astype(
         int
     )
     sec_x = SparseMatrixColumn(x_sparse, secint)
     sec_y = SparseMatrixRow(x_sparse, secint)
-    sec_z = await sec_x.dot(sec_y)
 
-    z = x_sparse.dot(x_sparse).tocoo()
+    start = datetime.now()
+    z = await sec_x.dot(sec_y)
+    # await z.print()
+    end = datetime.now()
+    delta_sparse = end - start
     print("===")
-    await sec_z.print()
-    print("===")
-    print(z)
+    print("Time for sparse:", delta_sparse.total_seconds())
 
-    sec_z_real = SparseMatrixCOO(z, secint)
-    assert await mpc.output(sec_z == sec_z_real)
+    dense_mat = x_sparse.astype(int).todense()
+    sec_dense = DenseMatrix(dense_mat, sectype=secint)
+
+    start = datetime.now()
+    z = sec_dense.dot(sec_dense)
+    # await z.print()
+    end = datetime.now()
+    delta_dense = end - start
+    print("===")
+    print("Time for dense:", delta_dense.total_seconds())
+    # await z.print()
 
 
 if __name__ == "__main__":
