@@ -28,7 +28,7 @@ class SortableTuple:
 
     def _lt_tuples(tup1, tup2):
         first_comp = tup1[0] < tup2[0]
-        if len(tup1) > 1:
+        if len(tup1) > 2:  # The last element is not subject of the sort in our case
             equal_comp = tup1[0] == tup2[0]
             recursive_comp = SortableTuple._lt_tuples(tup1[1:], tup2[1:])
             # first_comp or (recursive_comp and equal_comp)
@@ -362,7 +362,7 @@ class SparseVectorQuicksort(SecureMatrix):
 
 
 async def main():
-    n_dim = 100000
+    n_dim = 1000
     density = 0.01
     secint = mpc.SecInt(64)
 
@@ -390,7 +390,6 @@ async def main():
 
     sec_x = SparseVector(x_sparse, secint)
     sec_y = SparseVector(y_sparse, secint)
-
     start = datetime.now()
     z = sec_x.dot(sec_y)
     print(await mpc.output(z))
@@ -399,25 +398,25 @@ async def main():
     print("===")
     print("Time for sparse:", delta_sparse.total_seconds())
 
-    # sec_x = SparseVectorNaive(x_sparse, secint)
-    # sec_y = SparseVectorNaive(y_sparse, secint)
-    # start = datetime.now()
-    # z = sec_x.dot(sec_y)
-    # print(await mpc.output(z))
-    # end = datetime.now()
-    # delta_sparse = end - start
-    # print("===")
-    # print("Time for sparse naive:", delta_sparse.total_seconds())
+    sec_x = SparseVectorNaive(x_sparse, secint)
+    sec_y = SparseVectorNaive(y_sparse, secint)
+    start = datetime.now()
+    z = sec_x.dot(sec_y)
+    print(await mpc.output(z))
+    end = datetime.now()
+    delta_sparse = end - start
+    print("===")
+    print("Time for sparse naive:", delta_sparse.total_seconds())
 
-    # sec_x = SparseVectorNaivePSI(x_sparse, secint)
-    # sec_y = SparseVectorNaivePSI(y_sparse, secint)
-    # start = datetime.now()
-    # z = await sec_x.dot(sec_y)
-    # print(await mpc.output(z))
-    # end = datetime.now()
-    # delta_sparse = end - start
-    # print("===")
-    # print("Time for sparse psi:", delta_sparse.total_seconds())
+    sec_x = SparseVectorNaivePSI(x_sparse, secint)
+    sec_y = SparseVectorNaivePSI(y_sparse, secint)
+    start = datetime.now()
+    z = await sec_x.dot(sec_y)
+    print(await mpc.output(z))
+    end = datetime.now()
+    delta_sparse = end - start
+    print("===")
+    print("Time for sparse psi:", delta_sparse.total_seconds())
 
     sec_x = SparseVectorQuicksort(x_sparse, secint)
     sec_y = SparseVectorQuicksort(y_sparse, secint)
@@ -434,7 +433,7 @@ async def benchmark_sparse_sparse_mat_mult():
     n_dim = 100
     secint = mpc.SecInt(64)
 
-    x_sparse = scipy.sparse.random(200, 200, density=0.01, dtype=np.int16).astype(int)
+    x_sparse = scipy.sparse.random(2000, 200, density=0.01, dtype=np.int16).astype(int)
 
     dense_mat = x_sparse.astype(int).todense()
     sec_dense_t = DenseMatrix(dense_mat.transpose(), sectype=secint)
@@ -452,7 +451,6 @@ async def benchmark_sparse_sparse_mat_mult():
 
     start = datetime.now()
     z = await sec_x.dot(sec_y)
-    # await z.print()
     end = datetime.now()
     delta_sparse = end - start
     print("===")
