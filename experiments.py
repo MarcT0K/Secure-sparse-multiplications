@@ -8,6 +8,8 @@ from mpyc.runtime import mpc
 
 from datetime import datetime
 
+from sparse_dot_vector import *
+
 SparseMatrixListType = List[List[int]]
 ScipySparseMatType = scipy.sparse._coo.coo_matrix
 
@@ -227,18 +229,6 @@ class DenseMatrix(SecureMatrix):
         return self._mat[i][j]
 
 
-def sparse_vector_dot(vect1, vect2):
-    unsorted = vect1 + vect2
-    sorted_list = mpc.sorted(unsorted, key=SortableTuple)
-    res = 0
-    for i in range(len(sorted_list) - 1):
-        temp = sorted_list[i][1] * sorted_list[i + 1][1]
-        sec_comp = sorted_list[i][0] == sorted_list[i + 1][0]
-        temp = mpc.if_else(sec_comp, temp, 0)
-        res += temp
-    return res
-
-
 class DenseVector(DenseMatrix):
     def __init__(self, mat, sectype=None):
         if mat.shape[1] != 1 and mat.shape[0] != 1:
@@ -288,25 +278,92 @@ class SparseVector(SecureMatrix):
             print(f"({await mpc.output(i)}, {await mpc.output(v)})")
 
 
-# async def main():
-#     n_dim = 400
-#     secint = mpc.SecInt(64)
-#     x_sparse = scipy.sparse.random(n_dim, n_dim, density=0.1, dtype=np.int16).astype(
-#         int
-#     )
-#     x_dense = x_sparse.todense()
-#     l = np.vectorize(lambda x: secint(int(x)))(x_dense)
-#     l = l.tolist()
-#     print("here")
-#     z = mpc.matrix_prod(l, l)
-#     print(await mpc.output(z[0][0]))
-#     print(await mpc.output(l[0][0]))
-#     print(x_sparse.dot(x_sparse).todense()[0, 0])
+class SparseVectorNaive(SecureMatrix):
+    def __init__(self, sparse_mat, sectype=None):
+        if sparse_mat.shape[1] != 1:
+            raise ValueError("Input must be a vector")
+
+        super().__init__(sectype)
+        self.shape = sparse_mat.shape
+        to_sec_int = lambda x: self.sectype(int(x))
+
+        self.shape = sparse_mat.shape
+        self._mat = []
+        for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
+            self._mat.append([to_sec_int(i), to_sec_int(v)])
+
+    def dot(self, other):
+        if isinstance(other, SparseVectorNaive):
+            if self.shape != other.shape:
+                raise ValueError("Incompatible vector size")
+            return sparse_vector_dot_naive(self._mat, other._mat)
+        else:
+            raise NotImplementedError
+
+    async def print(self):
+        for i, v in self._mat:
+            print(f"({await mpc.output(i)}, {await mpc.output(v)})")
+
+
+class SparseVectorNaivePSI(SecureMatrix):
+    def __init__(self, sparse_mat, sectype=None):
+        if sparse_mat.shape[1] != 1:
+            raise ValueError("Input must be a vector")
+
+        super().__init__(sectype)
+        self.shape = sparse_mat.shape
+        to_sec_int = lambda x: self.sectype(int(x))
+
+        self.shape = sparse_mat.shape
+        self._mat = []
+        for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
+            self._mat.append([to_sec_int(i), to_sec_int(v)])
+
+    async def dot(self, other):
+        if isinstance(other, SparseVectorNaivePSI):
+            if self.shape != other.shape:
+                raise ValueError("Incompatible vector size")
+            return await sparse_vector_dot_psi(self._mat, other._mat, self.sectype)
+        else:
+            raise NotImplementedError
+
+    async def print(self):
+        for i, v in self._mat:
+            print(f"({await mpc.output(i)}, {await mpc.output(v)})")
+
+
+class SparseVectorQuicksort(SecureMatrix):
+    def __init__(self, sparse_mat, sectype=None):
+        if sparse_mat.shape[1] != 1:
+            raise ValueError("Input must be a vector")
+
+        super().__init__(sectype)
+        self.shape = sparse_mat.shape
+        to_sec_int = lambda x: self.sectype(int(x))
+
+        self.shape = sparse_mat.shape
+        self._mat = []
+        for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
+            self._mat.append([to_sec_int(i), to_sec_int(v)])
+
+    async def dot(self, other):
+        if isinstance(other, SparseVectorQuicksort):
+            if self.shape != other.shape:
+                raise ValueError("Incompatible vector size")
+            return await sparse_vector_dot_quicksort(
+                self._mat, other._mat, self.sectype, key=SortableTuple
+            )
+        else:
+            raise NotImplementedError
+
+    async def print(self):
+        for i, v in self._mat:
+            print(f"({await mpc.output(i)}, {await mpc.output(v)})")
 
 
 async def main():
-    n_dim = 100
-    density = 0.1
+    n_dim = 100000
+    density = 0.01
     secint = mpc.SecInt(64)
 
     x_sparse = scipy.sparse.random(n_dim, 1, density=density, dtype=np.int16).astype(
@@ -342,12 +399,42 @@ async def main():
     print("===")
     print("Time for sparse:", delta_sparse.total_seconds())
 
+    # sec_x = SparseVectorNaive(x_sparse, secint)
+    # sec_y = SparseVectorNaive(y_sparse, secint)
+    # start = datetime.now()
+    # z = sec_x.dot(sec_y)
+    # print(await mpc.output(z))
+    # end = datetime.now()
+    # delta_sparse = end - start
+    # print("===")
+    # print("Time for sparse naive:", delta_sparse.total_seconds())
+
+    # sec_x = SparseVectorNaivePSI(x_sparse, secint)
+    # sec_y = SparseVectorNaivePSI(y_sparse, secint)
+    # start = datetime.now()
+    # z = await sec_x.dot(sec_y)
+    # print(await mpc.output(z))
+    # end = datetime.now()
+    # delta_sparse = end - start
+    # print("===")
+    # print("Time for sparse psi:", delta_sparse.total_seconds())
+
+    sec_x = SparseVectorQuicksort(x_sparse, secint)
+    sec_y = SparseVectorQuicksort(y_sparse, secint)
+    start = datetime.now()
+    z = await sec_x.dot(sec_y)
+    print(await mpc.output(z))
+    end = datetime.now()
+    delta_sparse = end - start
+    print("===")
+    print("Time for sparse quicksort:", delta_sparse.total_seconds())
+
 
 async def benchmark_sparse_sparse_mat_mult():
     n_dim = 100
     secint = mpc.SecInt(64)
 
-    x_sparse = scipy.sparse.random(400, 4000, density=0.001, dtype=np.int16).astype(int)
+    x_sparse = scipy.sparse.random(200, 200, density=0.01, dtype=np.int16).astype(int)
 
     dense_mat = x_sparse.astype(int).todense()
     sec_dense_t = DenseMatrix(dense_mat.transpose(), sectype=secint)
@@ -355,7 +442,6 @@ async def benchmark_sparse_sparse_mat_mult():
 
     start = datetime.now()
     z = sec_dense_t.dot(sec_dense)
-    # await z.print()
     end = datetime.now()
     delta_dense = end - start
     print("===")
@@ -375,3 +461,4 @@ async def benchmark_sparse_sparse_mat_mult():
 
 if __name__ == "__main__":
     mpc.run(main())
+    # mpc.run(benchmark_sparse_sparse_mat_mult())
