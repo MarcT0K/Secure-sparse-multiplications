@@ -60,16 +60,20 @@ async def sparse_vector_dot_psi(vect1, vect2, sectype):
     return res
 
 
-def merge_oram(vect1, vect2, sectype):
-    n_tot = len(vect1) + len(vect2)
+def merge_oram(mat1, mat2, sectype):
+    n_tot = len(mat1[0]) + len(mat2[0])
     ind1 = sectype(0)
     ind2 = sectype(0)
     res = []
     for _ in range(n_tot):
-        v1 = vect1[ind1]
-        v2 = vect2[ind2]
-        comp = v1[0] < v2[0]  # works for tuples of length 2 ONLY
-        res.append(mpc.if_else(comp, v1, v2))
+        v1 = mat1[1][ind1]
+        i1 = mat1[0][ind1]
+        v2 = mat2[1][ind2]
+        i2 = mat2[0][ind2]
+        comp = i1 < i2  # works for tuples of length 2 ONLY
+        res.append([0, 0])
+        res[-1][0] = mpc.if_else(comp, ind1, ind2)
+        res[-1][1] = mpc.if_else(comp, v1, v2)
         ind1 = ind1 + comp
         ind2 = ind2 + 1 - comp
     return res
