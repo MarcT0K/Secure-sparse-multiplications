@@ -144,7 +144,8 @@ class SparseMatrixColumn(SecureMatrix):
 
                         res.append([left_i, right_j, left_value * right_value])
 
-            res = mpc.sorted(res, SortableTuple)
+            # res = mpc.sorted(res, SortableTuple)
+            res = await quicksort(res, self.sectype, key=SortableTuple)
 
             for i in range(1, len(res)):
                 sec_comp_res = (res[i - 1][0] == res[i][0]) & (
@@ -469,11 +470,12 @@ async def main():
     print("Time for sparse quicksort:", delta_sparse.total_seconds())
 
 
-async def benchmark_sparse_sparse_mat_mult():
-    n_dim = 100
+async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
     secint = mpc.SecInt(64)
 
-    x_sparse = scipy.sparse.random(2000, 200, density=0.01, dtype=np.int16).astype(int)
+    x_sparse = scipy.sparse.random(
+        n_dim, m_dim, density=sparsity, dtype=np.int16
+    ).astype(int)
 
     dense_mat = x_sparse.astype(int).todense()
     sec_dense_t = DenseMatrix(dense_mat.transpose(), sectype=secint)
@@ -498,5 +500,11 @@ async def benchmark_sparse_sparse_mat_mult():
 
 
 if __name__ == "__main__":
-    mpc.run(main())
-    # mpc.run(benchmark_sparse_sparse_mat_mult())
+    # mpc.run(main())
+    mpc.run(benchmark_sparse_sparse_mat_mult(10000))
+
+
+# Current directions:
+# - public comparison via square root
+# - sparse-dense multiplication using DORAM
+# - merging network to improve multiplications

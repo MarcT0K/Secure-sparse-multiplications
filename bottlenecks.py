@@ -180,8 +180,104 @@ async def other_measurements():
     print("Average multiplication runtime:", delta_sparse.total_seconds() / NB_REP)
 
 
+async def other_measurements_32bits():
+    print("Other measurements")
+    sectype = mpc.SecInt(32)
+    rand_list = [sectype(random.randint(0, 1024)) for _ in range(100)]
+
+    start = datetime.now()
+    mpc.random.shuffle(sectype, rand_list)
+    end = datetime.now()
+    delta_sparse = end - start
+    print(f"Shuffle runtime ({len(rand_list)} elements):", delta_sparse.total_seconds())
+
+    start = datetime.now()
+    mpc.sorted(rand_list)
+    end = datetime.now()
+    delta_sparse = end - start
+    print(f"Sort runtime ({len(rand_list)} elements):", delta_sparse.total_seconds())
+
+    rand_list_tuple = [
+        [sectype(random.randint(0, 1024)), sectype(0)] for _ in range(100)
+    ]
+    start = datetime.now()
+    mpc.sorted(rand_list_tuple, key=SortableTuple)
+    end = datetime.now()
+    delta_sparse = end - start
+    print(f"Sort runtime ({len(rand_list)} tuples):", delta_sparse.total_seconds())
+
+    NB_REP = 1000
+    start = datetime.now()
+    for _i in range(NB_REP):
+        rand_list[1] == rand_list[2]
+    end = datetime.now()
+    delta_sparse = end - start
+    print("Average equality runtime:", delta_sparse.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in range(NB_REP):
+        rand_list[1] < rand_list[2]
+    end = datetime.now()
+    delta_sparse = end - start
+    print("Average inequality runtime:", delta_sparse.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in range(NB_REP):
+        mpc.eq_public(rand_list[1], rand_list[2])
+    end = datetime.now()
+    delta_sparse = end - start
+    print("Average public equality runtime:", delta_sparse.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in range(NB_REP):
+        _ = rand_list[1] * rand_list[2]
+    end = datetime.now()
+    delta_sparse = end - start
+    print("Average multiplication runtime:", delta_sparse.total_seconds() / NB_REP)
+
+
+async def investigation():
+    print("Investigation")
+    sectype = mpc.SecInt(32)
+    x = sectype(-2)
+    start = datetime.now()
+    for _i in range(100):
+        y = x >> 64
+    end = datetime.now()
+    delta = end - start
+    print("Average shift runtime:", delta.total_seconds() / 100)
+
+    start = datetime.now()
+    for _i in range(100):
+        y = x % 2**64
+    end = datetime.now()
+    delta = end - start
+    print("Average modulo runtime:", delta.total_seconds() / 100)
+
+
+async def overflow():
+    sectype = mpc.SecInt(64)
+
+    i = 2**62
+    x = sectype(i)
+    y = x >> 64
+    res1 = await mpc.output(y)
+    print(res1)
+    x = sectype(-i)
+    y = x >> 64
+    res2 = await mpc.output(y)
+    cond = res1 == 0 and res2 != 0
+    print(res2)
+
+
+# IDEA: if we have an integer square root: we compute x == sqrt(x**2)
+
+
 if __name__ == "__main__":
-    mpc.run(bottleneck_comparison(1000))
-    mpc.run(bottleneck_comparison(10000))
-    mpc.run(bottleneck_comparison(100000))
-    mpc.run(other_measurements())
+    # mpc.run(bottleneck_comparison(1000))
+    # mpc.run(bottleneck_comparison(10000))
+    # mpc.run(bottleneck_comparison(100000))
+    # mpc.run(other_measurements())
+    # mpc.run(other_measurements_32bits())
+    mpc.run(investigation())
+    mpc.run(overflow())
