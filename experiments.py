@@ -472,7 +472,7 @@ async def main():
 
 async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
     secint = mpc.SecInt(64)
-
+    print("Started experiment with n =", n_dim)
     x_sparse = scipy.sparse.random(
         n_dim, m_dim, density=sparsity, dtype=np.int16
     ).astype(int)
@@ -501,10 +501,12 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
 
 if __name__ == "__main__":
     # mpc.run(main())
+    mpc.run(benchmark_sparse_sparse_mat_mult(1000))
     mpc.run(benchmark_sparse_sparse_mat_mult(10000))
+    mpc.run(benchmark_sparse_sparse_mat_mult(100000))
 
 
 # Current directions:
-# - public comparison via square root
+# - public comparison via square root (Secure sqrt: https://eprint.iacr.org/2012/405)
 # - sparse-dense multiplication using DORAM
 # - merging network to improve multiplications

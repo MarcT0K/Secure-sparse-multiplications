@@ -1,0 +1,4 @@
+mpyc
+scipy
+numpy
+gmpy2
