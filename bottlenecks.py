@@ -3,6 +3,7 @@ import scipy.sparse
 import numpy as np
 from datetime import datetime
 import random
+import gmpy2
 
 
 class SortableTuple:
@@ -270,7 +271,87 @@ async def overflow():
     print(res2)
 
 
-# IDEA: if we have an integer square root: we compute x == sqrt(x**2)
+@mpc.coroutine
+async def bsgn_0(a):
+    """Compute binary sign of a securely.
+    Binary sign of a (1 if a>=0 else -1) is obtained by securely computing (2a+1 | p).
+    Legendre symbols (a | p) for secret a are computed securely by evaluating
+    (a s r^2 | p) in the clear for secret random sign s and secret random r modulo p,
+    and outputting secret s * (a s r^2 | p).
+    """
+    stype = type(a)
+    await mpc.returnType(stype)
+    Zp = stype.field
+    p = Zp.modulus
+    legendre_p = lambda a: gmpy2.legendre(a.value, p)
+
+    s = mpc.random_bits(Zp, 1, signed=True)  # random sign
+    r = mpc._random(Zp)
+    r = mpc.prod([r, r])  # random square modulo p
+    a, s, r = await mpc.gather(a, s, r)
+    b = await mpc.prod([2 * a + 1, s[0], r])
+    b = await mpc.output(b)
+    return s[0] * legendre_p(b)
+
+
+@mpc.coroutine
+async def bsgn_2(a):
+    """Compute binary sign of a securely.
+    Binary sign of a (1 if a>=0 else -1) is obtained by securely computing
+    (t | p), with t = sum((2a+1+2i | p) for i=-2,-1,0,1,2).
+    """
+    stype = type(a)
+    await mpc.returnType(stype)
+    Zp = stype.field
+    p = Zp.modulus
+    legendre_p = lambda a: gmpy2.legendre(a.value, p)
+
+    s = mpc.random_bits(Zp, 6, signed=True)  # 6 random signs
+    r = mpc._randoms(Zp, 6)
+    r = mpc.schur_prod(r, r)  # 6 random squares modulo p
+    a, s, r = await mpc.gather(a, s, r)
+    y = [b + 2 * i for b in (2 * a + 1,) for i in (-2, -1, 0, 1, 2)]
+    y = await mpc.schur_prod(y, s[:-1])
+    y.append(s[-1])
+    y = await mpc.schur_prod(y, r)
+    y = await mpc.output(y)
+    t = sum(s[i] * legendre_p(y[i]) for i in range(5))
+    t = await mpc.output(t * y[-1])
+    return s[-1] * legendre_p(t)
+
+
+async def benchmark_bsgn():
+    secint = mpc.SecInt(14, p=15569949805843283171)
+    x = secint(-3)
+    NB_REP = 1000
+    start = datetime.now()
+    for _i in range(NB_REP):
+        s = bsgn_2(x)
+    end = datetime.now()
+    delta = end - start
+    print("Average bsgn2 runtime:\t", delta.total_seconds() / NB_REP)
+    start = datetime.now()
+    for _i in range(NB_REP):
+        s = x < 0
+    end = datetime.now()
+    delta = end - start
+    print("Average sgn runtime:\t", delta.total_seconds() / NB_REP)
+
+    secint = mpc.SecInt(14, p=3546374752298322551)
+    x = secint(-3)
+    NB_REP = 1000
+    start = datetime.now()
+    for _i in range(NB_REP):
+        s = bsgn_0(x)
+    end = datetime.now()
+    delta = end - start
+    print("Average bsgn0 runtime:\t", delta.total_seconds() / NB_REP)
+    start = datetime.now()
+    for _i in range(NB_REP):
+        s = x < 0
+    end = datetime.now()
+    delta = end - start
+    print("Average sgn runtime:\t", delta.total_seconds() / NB_REP)
 
 
 if __name__ == "__main__":
@@ -279,5 +360,6 @@ if __name__ == "__main__":
     # mpc.run(bottleneck_comparison(100000))
     # mpc.run(other_measurements())
     # mpc.run(other_measurements_32bits())
-    mpc.run(investigation())
-    mpc.run(overflow())
+    # mpc.run(investigation())
+    # mpc.run(overflow())
+    mpc.run(benchmark_bsgn())
