@@ -122,13 +122,25 @@ class SparseMatrixCOO(SecureMatrix):
 
 
 class SparseMatrixColumn(SecureMatrix):
-    def __init__(self, sparse_mat: ScipySparseMatType, sectype=None):
+    def __init__(
+        self, sparse_mat: ScipySparseMatType, sectype=None, sort_coroutine=None
+    ):
         super().__init__(sectype)
+
+        self.sort_coroutine = (
+            SparseMatrixColumn.default_sort
+            if sort_coroutine is None
+            else sort_coroutine
+        )
         self.shape = sparse_mat.shape
         to_sec_int = lambda x: self.sectype(int(x))
         self._mat = [[] for i in range(sparse_mat.shape[1])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
             self._mat[j].append((to_sec_int(i), to_sec_int(v)))
+
+    @staticmethod
+    async def default_sort(unsorted, _sectype, key=None):
+        return mpc.sorted(unsorted, key)
 
     async def dot(self, other) -> SparseMatrixCOO:
         if self.shape[1] != other.shape[0]:
@@ -144,8 +156,7 @@ class SparseMatrixColumn(SecureMatrix):
 
                         res.append([left_i, right_j, left_value * right_value])
 
-            # res = mpc.sorted(res, SortableTuple)
-            res = await quicksort(res, self.sectype, key=SortableTuple)
+            res = await self.sort_coroutine(res, self.sectype, key=SortableTuple)
 
             for i in range(1, len(res)):
                 sec_comp_res = (res[i - 1][0] == res[i][0]) & (
@@ -485,7 +496,6 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
     z = sec_dense_t.dot(sec_dense)
     end = datetime.now()
     delta_dense = end - start
-    print("===")
     print("Time for dense:", delta_dense.total_seconds())
 
     sec_x = SparseMatrixColumn(x_sparse.transpose(), secint)
@@ -495,18 +505,48 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
     z = await sec_x.dot(sec_y)
     end = datetime.now()
     delta_sparse = end - start
-    print("===")
-    print("Time for sparse:", delta_sparse.total_seconds())
+    print("Time for sparse with batcher sort:", delta_sparse.total_seconds())
+
+    sec_x = SparseMatrixColumn(x_sparse.transpose(), secint, quicksort)
+    sec_y = SparseMatrixRow(x_sparse, secint)
+
+    start = datetime.now()
+    z = await sec_x.dot(sec_y)
+    end = datetime.now()
+    delta_sparse = end - start
+    print("Time for sparse with quick sort:", delta_sparse.total_seconds())
+    print("=== END")
 
 
 if __name__ == "__main__":
     # mpc.run(main())
     mpc.run(benchmark_sparse_sparse_mat_mult(1000))
     mpc.run(benchmark_sparse_sparse_mat_mult(10000))
-    mpc.run(benchmark_sparse_sparse_mat_mult(100000))
+    mpc.run(benchmark_sparse_sparse_mat_mult(1000000))
 
+# Results
+# Started experiment with n = 1000
+# ===
+# Time for dense: 4.506629
+# ===
+# Time for sparse: 3.391966
+# Started experiment with n = 10000
+# ===
+# Time for dense: 75.327001
+# ===
+# Time for sparse: 179.795847
+# Started experiment with n = 100000
+# ===
+# Time for dense: 725.376901
+# ===
+# Time for sparse: 20029.160868
+
+# Problems:
+# - If we have a comparison x100 more expensive than a multiplication, the dot product will never be profitable for sparsity above 1%
+# - Public inequality contrary to public equality cannot bring improvement
 
 # Current directions:
 # - public comparison via square root (Secure sqrt: https://eprint.iacr.org/2012/405)
 # - sparse-dense multiplication using DORAM
 # - merging network to improve multiplications
+# - DORAM use for sparse matrix covariance
