@@ -545,12 +545,12 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
 
 
 async def main():
-    mpc.start()
+    await mpc.start()
     await benchmark_dot_product()
     await benchmark_sparse_sparse_mat_mult(1000)
     await benchmark_sparse_sparse_mat_mult(10000)
     await benchmark_sparse_sparse_mat_mult(1000000)
-    mpc.shutdown()
+    await mpc.shutdown()
 
 
 if __name__ == "__main__":
