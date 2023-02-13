@@ -1,4 +1,5 @@
 from mpyc.runtime import mpc
+from mpyc.numpy import np
 from experiments import SortableTuple
 from quicksort import quicksort
 
@@ -57,6 +58,32 @@ async def sparse_vector_dot_psi(vect1, vect2, sectype):
             # print(comp)
             if comp:
                 res += temp
+    return res
+
+
+async def sparse_vector_dot_psi_opti(vect1, vect2, sectype):
+    res = sectype(0)
+    mpc.random.shuffle(sectype, vect1)
+    mpc.random.shuffle(sectype, vect2)
+
+    val1 = [vect1[i][1] for i in range(len(vect1))]
+    ind1 = [vect1[i][0] for i in range(len(vect1))]
+    val1_ext = mpc.np_fromlist(val1 * len(vect2))
+    ind1_ext = mpc.np_fromlist(ind1 * len(vect2))
+
+    val2 = [vect1[i][1] for i in range(len(vect1))]
+    ind2 = [vect1[i][0] for i in range(len(vect1))]
+
+    val2_ext = []
+    ind2_ext = []
+    for j in range(len(vect2)):
+        val2_ext += [val2[j]] * len(vect1)
+        ind2_ext += [ind2[j]] * len(vect1)
+    ind2_ext = mpc.np_fromlist(ind2_ext)
+    val2_ext = mpc.np_fromlist(val2_ext)
+
+    eq_ind = await mpc.np_is_zero_public(mpc.np_subtract(ind1_ext, ind2_ext))
+    res = mpc.np_sum(mpc.np_multiply(val2_ext[eq_ind], val1_ext[eq_ind]))
     return res
 
 

@@ -290,19 +290,9 @@ class SparseVector(SecureMatrix):
             print(f"({await mpc.output(i)}, {await mpc.output(v)})")
 
 
-class SparseVectorNaive(SecureMatrix):
+class SparseVectorNaive(SparseVector):
     def __init__(self, sparse_mat, sectype=None):
-        if sparse_mat.shape[1] != 1:
-            raise ValueError("Input must be a vector")
-
-        super().__init__(sectype)
-        self.shape = sparse_mat.shape
-        to_sec_int = lambda x: self.sectype(int(x))
-
-        self.shape = sparse_mat.shape
-        self._mat = []
-        for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            self._mat.append([to_sec_int(i), to_sec_int(v)])
+        super().__init__(sparse_mat, sectype)
 
     def dot(self, other):
         if isinstance(other, SparseVectorNaive):
@@ -312,24 +302,13 @@ class SparseVectorNaive(SecureMatrix):
         else:
             raise NotImplementedError
 
-    async def print(self):
-        for i, v in self._mat:
-            print(f"({await mpc.output(i)}, {await mpc.output(v)})")
 
-
-class SparseVectorNaivePSI(SecureMatrix):
+class SparseVectorNaivePSI(SparseVector):
     def __init__(self, sparse_mat, sectype=None):
         if sparse_mat.shape[1] != 1:
             raise ValueError("Input must be a vector")
 
-        super().__init__(sectype)
-        self.shape = sparse_mat.shape
-        to_sec_int = lambda x: self.sectype(int(x))
-
-        self.shape = sparse_mat.shape
-        self._mat = []
-        for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            self._mat.append([to_sec_int(i), to_sec_int(v)])
+        super().__init__(sparse_mat, sectype)
 
     async def dot(self, other):
         if isinstance(other, SparseVectorNaivePSI):
@@ -339,24 +318,23 @@ class SparseVectorNaivePSI(SecureMatrix):
         else:
             raise NotImplementedError
 
-    async def print(self):
-        for i, v in self._mat:
-            print(f"({await mpc.output(i)}, {await mpc.output(v)})")
 
-
-class SparseVectorQuicksort(SecureMatrix):
+class SparseVectorNaivePSIOpti(SparseVector):
     def __init__(self, sparse_mat, sectype=None):
-        if sparse_mat.shape[1] != 1:
-            raise ValueError("Input must be a vector")
+        super().__init__(sparse_mat, sectype)
 
-        super().__init__(sectype)
-        self.shape = sparse_mat.shape
-        to_sec_int = lambda x: self.sectype(int(x))
+    async def dot(self, other):
+        if isinstance(other, SparseVectorNaivePSIOpti):
+            if self.shape != other.shape:
+                raise ValueError("Incompatible vector size")
+            return await sparse_vector_dot_psi_opti(self._mat, other._mat, self.sectype)
+        else:
+            raise NotImplementedError
 
-        self.shape = sparse_mat.shape
-        self._mat = []
-        for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            self._mat.append([to_sec_int(i), to_sec_int(v)])
+
+class SparseVectorQuicksort(SparseVector):
+    def __init__(self, sparse_mat, sectype=None):
+        super().__init__(sparse_mat, sectype)
 
     async def dot(self, other):
         if isinstance(other, SparseVectorQuicksort):
@@ -367,10 +345,6 @@ class SparseVectorQuicksort(SecureMatrix):
             )
         else:
             raise NotImplementedError
-
-    async def print(self):
-        for i, v in self._mat:
-            print(f"({await mpc.output(i)}, {await mpc.output(v)})")
 
 
 class SparseVectorORAM(SecureMatrix):
@@ -389,6 +363,7 @@ class SparseVectorORAM(SecureMatrix):
             self._mat[1].append(to_sec_int(v))
 
     async def dot(self, other):
+        # TODO: fix => invalid output
         if isinstance(other, SparseVectorORAM):
             if self.shape != other.shape:
                 raise ValueError("Incompatible vector size")
@@ -404,7 +379,7 @@ class SparseVectorORAM(SecureMatrix):
 
 
 async def main():
-    n_dim = 100000
+    n_dim = 1000000
     density = 0.001
     secint = mpc.SecInt(64)
 
@@ -459,6 +434,16 @@ async def main():
     delta_sparse = end - start
     print("===")
     print("Time for sparse psi:", delta_sparse.total_seconds())
+
+    sec_x = SparseVectorNaivePSIOpti(x_sparse, secint)
+    sec_y = SparseVectorNaivePSIOpti(y_sparse, secint)
+    start = datetime.now()
+    z = await sec_x.dot(sec_y)
+    print(await mpc.output(z))
+    end = datetime.now()
+    delta_sparse = end - start
+    print("===")
+    print("Time for sparse psi optimized:", delta_sparse.total_seconds())
 
     sec_x = SparseVectorORAM(x_sparse, secint)
     sec_y = SparseVectorORAM(y_sparse, secint)
@@ -519,10 +504,10 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
 
 
 if __name__ == "__main__":
-    # mpc.run(main())
-    mpc.run(benchmark_sparse_sparse_mat_mult(1000))
-    mpc.run(benchmark_sparse_sparse_mat_mult(10000))
-    mpc.run(benchmark_sparse_sparse_mat_mult(1000000))
+    mpc.run(main())
+    # mpc.run(benchmark_sparse_sparse_mat_mult(1000))
+    # mpc.run(benchmark_sparse_sparse_mat_mult(10000))
+    # mpc.run(benchmark_sparse_sparse_mat_mult(1000000))
 
 # Results
 # Started experiment with n = 1000
