@@ -130,7 +130,10 @@ async def bottleneck_comparison(n_dim):
 
 async def other_measurements():
     print("Other measurements")
+    await mpc.start()
     sectype = mpc.SecInt(64)
+    NB_REP = 1000
+
     rand_list = [sectype(random.randint(0, 1024)) for _ in range(100)]
 
     start = datetime.now()
@@ -154,7 +157,16 @@ async def other_measurements():
     delta_sparse = end - start
     print(f"Sort runtime ({len(rand_list)} tuples):", delta_sparse.total_seconds())
 
-    NB_REP = 1000
+    start = datetime.now()
+    for _i in range(NB_REP):
+        mpc.np_fromlist(rand_list)
+    end = datetime.now()
+    delta_sparse = end - start
+    print(
+        f"Average secure-list-transformation runtime ({len(rand_list)} elements):",
+        delta_sparse.total_seconds() / NB_REP,
+    )
+
     start = datetime.now()
     for _i in range(NB_REP):
         rand_list[1] == rand_list[2]
@@ -182,6 +194,7 @@ async def other_measurements():
     end = datetime.now()
     delta_sparse = end - start
     print("Average multiplication runtime:", delta_sparse.total_seconds() / NB_REP)
+    await mpc.shutdown()
 
 
 async def other_measurements_32bits():
@@ -442,10 +455,10 @@ if __name__ == "__main__":
     # mpc.run(bottleneck_comparison(1000))
     # mpc.run(bottleneck_comparison(10000))
     # mpc.run(bottleneck_comparison(100000))
-    # mpc.run(other_measurements())
+    mpc.run(other_measurements())
     # mpc.run(other_measurements_32bits())
     # mpc.run(investigation())
     # mpc.run(overflow())
     # mpc.run(benchmark_bsgn())
     # mpc.run(benchmark_sort(100))
-    mpc.run(benchmark_vectorized_comp(1000))
+    # mpc.run(benchmark_vectorized_comp(1000))

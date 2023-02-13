@@ -403,6 +403,7 @@ class SparseVectorORAM(SecureMatrix):
 
 
 async def benchmark_dot_product(n_dim=10000, density=0.01):
+    await mpc.start()
     secint = mpc.SecInt(64)
 
     x_sparse = scipy.sparse.random(n_dim, 1, density=density, dtype=np.int16).astype(
@@ -496,9 +497,11 @@ async def benchmark_dot_product(n_dim=10000, density=0.01):
     delta_sparse = end - start
     print("Time for sparse quicksort:", delta_sparse.total_seconds())
     print("===")
+    await mpc.shutdown()
 
 
 async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
+    await mpc.start()
     secint = mpc.SecInt(64)
     print("Started experiment with n =", n_dim)
     x_sparse = scipy.sparse.random(
@@ -542,6 +545,7 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
     delta_sparse = end - start
     print("Time for sparse with quick sort:", delta_sparse.total_seconds())
     print("=== END")
+    await mpc.shutdown()
 
 
 if __name__ == "__main__":
@@ -550,22 +554,27 @@ if __name__ == "__main__":
     mpc.run(benchmark_sparse_sparse_mat_mult(10000))
     mpc.run(benchmark_sparse_sparse_mat_mult(1000000))
 
-# Results
-# Started experiment with n = 1000
+# Real result: 198494355
 # ===
-# Time for dense: 4.506629
+# 198494355
+# Time for dense: 0.021818
 # ===
-# Time for sparse: 3.391966
-# Started experiment with n = 10000
+# 198494355
+# Time for dense: 0.377301
 # ===
-# Time for dense: 75.327001
+# 198494355
+# Time for sparse: 5.033067
 # ===
-# Time for sparse: 179.795847
-# Started experiment with n = 100000
+# 198494355
+# Time for sparse psi: 1.812845
 # ===
-# Time for dense: 725.376901
+# 198494355
+# Time for sparse psi optimized: 0.696774
 # ===
-# Time for sparse: 20029.160868
+# 198494355
+# Time for sparse quicksort: 4.429403
+# ===
+
 
 # Problems:
 # - If we have a comparison x100 more expensive than a multiplication, the dot product will never be profitable for sparsity above 1%
