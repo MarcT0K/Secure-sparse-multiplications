@@ -47,15 +47,7 @@ async def sparse_vector_dot_psi(vect1, vect2, sectype):
     for i in range(len(vect1)):
         for j in range(len(vect2)):
             temp = vect1[i][1] * vect2[j][1]
-            # rand = mpc.from_bits(
-            #     mpc.random_bits(sectype, sectype.bit_length, signed=True)
-            # )  # Bottleneck is here
-
-            # sec_comp = (vect1[i][0] - vect2[j][0]) * rand
-            # if await mpc.output(sec_comp) == 0:
-
             comp = await mpc.is_zero_public(vect1[i][0] - vect2[j][0])
-            # print(comp)
             if comp:
                 res += temp
     return res
@@ -71,8 +63,8 @@ async def sparse_vector_dot_psi_opti(vect1, vect2, sectype):
     val1_ext = mpc.np_fromlist(val1 * len(vect2))
     ind1_ext = mpc.np_fromlist(ind1 * len(vect2))
 
-    val2 = [vect1[i][1] for i in range(len(vect1))]
-    ind2 = [vect1[i][0] for i in range(len(vect1))]
+    val2 = [vect2[i][1] for i in range(len(vect1))]
+    ind2 = [vect2[i][0] for i in range(len(vect1))]
 
     val2_ext = []
     ind2_ext = []
@@ -83,7 +75,8 @@ async def sparse_vector_dot_psi_opti(vect1, vect2, sectype):
     val2_ext = mpc.np_fromlist(val2_ext)
 
     eq_ind = await mpc.np_is_zero_public(mpc.np_subtract(ind1_ext, ind2_ext))
-    res = mpc.np_sum(mpc.np_multiply(val2_ext[eq_ind], val1_ext[eq_ind]))
+    mult_res = mpc.np_multiply(val2_ext[eq_ind], val1_ext[eq_ind])
+    res = mpc.np_sum(mult_res)
     return res
 
 
