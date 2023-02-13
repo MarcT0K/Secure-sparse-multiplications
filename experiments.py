@@ -241,6 +241,23 @@ class DenseMatrix(SecureMatrix):
         return self._mat[i][j]
 
 
+class DenseMatrixNaive(DenseMatrix):
+    def __init__(self, mat, sectype=None):
+        super().__init__(mat, sectype)
+
+    def dot(self, other):
+        if not isinstance(other, DenseMatrixNaive):
+            raise ValueError("Can only multiply dense with dense")
+
+        res = [[0] * other.shape[1]] * self.shape[0]
+        for k in range(self.shape[1]):
+            for i in range(self.shape[0]):
+                for j in range(other.shape[1]):
+                    res[i][j] += self._mat[i][k] * other._mat[k][j]
+
+        return DenseMatrix(res)
+
+
 class DenseVector(DenseMatrix):
     def __init__(self, mat, sectype=None):
         if mat.shape[1] != 1 and mat.shape[0] != 1:
@@ -252,13 +269,20 @@ class DenseVector(DenseMatrix):
             res = super().dot(other)
             assert res.shape == (1, 1)
             return res.get(0, 0)
+        else:
+            raise NotImplementedError
 
-            # Unoptimized algorithm
-            # res = self._mat[0][0] * other._mat[0][0]
-            # print("LEN:", self.shape[1])
-            # for i in range(self.shape[1]):
-            #     res += self._mat[0][i] * other._mat[i][0]
-            # return res
+
+class DenseVectorNaive(DenseVector):
+    def __init__(self, mat, sectype=None):
+        super().__init__(mat, sectype)
+
+    def dot(self, other):
+        if isinstance(other, DenseVector):
+            res = self._mat[0][0] * other._mat[0][0]
+            for i in range(self.shape[1]):
+                res += self._mat[0][i] * other._mat[i][0]
+            return res
         else:
             raise NotImplementedError
 
@@ -378,9 +402,7 @@ class SparseVectorORAM(SecureMatrix):
             print(f"({await mpc.output(i)}, {await mpc.output(v)})")
 
 
-async def main():
-    n_dim = 1000
-    density = 0.1
+async def benchmark_dot_product(n_dim=10000, density=0.01):
     secint = mpc.SecInt(64)
 
     x_sparse = scipy.sparse.random(n_dim, 1, density=density, dtype=np.int16).astype(
@@ -393,10 +415,20 @@ async def main():
     dense_x = x_sparse.astype(int).todense()
     dense_y = y_sparse.astype(int).todense()
     print("Real result:", dense_x.transpose().dot(dense_y)[0, 0])
-    sec_dense_x = DenseVector(dense_x.transpose(), sectype=secint)
-    sec_dense_y = DenseVector(dense_y, sectype=secint)
     print("===")
 
+    sec_dense_x = DenseVector(dense_x.transpose(), sectype=secint)
+    sec_dense_y = DenseVector(dense_y, sectype=secint)
+    start = datetime.now()
+    z = sec_dense_x.dot(sec_dense_y)
+    print(await mpc.output(z))
+    end = datetime.now()
+    delta_dense = end - start
+    print("Time for dense:", delta_dense.total_seconds())
+    print("===")
+
+    sec_dense_x = DenseVectorNaive(dense_x.transpose(), sectype=secint)
+    sec_dense_y = DenseVectorNaive(dense_y, sectype=secint)
     start = datetime.now()
     z = sec_dense_x.dot(sec_dense_y)
     print(await mpc.output(z))
@@ -483,6 +515,15 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
     delta_dense = end - start
     print("Time for dense:", delta_dense.total_seconds())
 
+    sec_dense_t = DenseMatrixNaive(dense_mat.transpose(), sectype=secint)
+    sec_dense = DenseMatrixNaive(dense_mat, sectype=secint)
+
+    start = datetime.now()
+    z = sec_dense_t.dot(sec_dense)
+    end = datetime.now()
+    delta_dense = end - start
+    print("Time for dense naive:", delta_dense.total_seconds())
+
     sec_x = SparseMatrixColumn(x_sparse.transpose(), secint)
     sec_y = SparseMatrixRow(x_sparse, secint)
 
@@ -504,10 +545,10 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
 
 
 if __name__ == "__main__":
-    mpc.run(main())
-    # mpc.run(benchmark_sparse_sparse_mat_mult(1000))
-    # mpc.run(benchmark_sparse_sparse_mat_mult(10000))
-    # mpc.run(benchmark_sparse_sparse_mat_mult(1000000))
+    mpc.run(benchmark_dot_product())
+    mpc.run(benchmark_sparse_sparse_mat_mult(1000))
+    mpc.run(benchmark_sparse_sparse_mat_mult(10000))
+    mpc.run(benchmark_sparse_sparse_mat_mult(1000000))
 
 # Results
 # Started experiment with n = 1000
