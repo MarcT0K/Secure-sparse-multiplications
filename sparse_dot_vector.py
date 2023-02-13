@@ -55,6 +55,8 @@ async def sparse_vector_dot_psi(vect1, vect2, sectype):
 
 async def sparse_vector_dot_psi_opti(vect1, vect2, sectype):
     res = sectype(0)
+
+    # Shuffling time dominates runtime
     mpc.random.shuffle(sectype, vect1)
     mpc.random.shuffle(sectype, vect2)
 

@@ -434,7 +434,7 @@ async def benchmark_dot_product(n_dim=10000, density=0.01):
     print(await mpc.output(z))
     end = datetime.now()
     delta_dense = end - start
-    print("Time for dense:", delta_dense.total_seconds())
+    print("Time for dense unoptimized:", delta_dense.total_seconds())
     print("===")
 
     sec_x = SparseVector(x_sparse, secint)
