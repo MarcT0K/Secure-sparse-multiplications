@@ -422,7 +422,6 @@ async def benchmark_vectorized_comp(n_dim):
     for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Naive comparison"):
         for j in range(len(sec_list)):
             x = await mpc.is_zero_public(sec_list[j])
-            print(x, end=" ")
     end = datetime.now()
     delta = end - start
     print("Average naive public equality runtime:\t", delta.total_seconds() / NB_REP)

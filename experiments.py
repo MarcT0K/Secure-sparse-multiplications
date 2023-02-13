@@ -395,14 +395,15 @@ async def main():
     print("Real result:", dense_x.transpose().dot(dense_y)[0, 0])
     sec_dense_x = DenseVector(dense_x.transpose(), sectype=secint)
     sec_dense_y = DenseVector(dense_y, sectype=secint)
-
     print("===")
+
     start = datetime.now()
     z = sec_dense_x.dot(sec_dense_y)
     print(await mpc.output(z))
     end = datetime.now()
     delta_dense = end - start
     print("Time for dense:", delta_dense.total_seconds())
+    print("===")
 
     sec_x = SparseVector(x_sparse, secint)
     sec_y = SparseVector(y_sparse, secint)
@@ -411,8 +412,8 @@ async def main():
     print(await mpc.output(z))
     end = datetime.now()
     delta_sparse = end - start
-    print("===")
     print("Time for sparse:", delta_sparse.total_seconds())
+    print("===")
 
     # sec_x = SparseVectorNaive(x_sparse, secint)
     # sec_y = SparseVectorNaive(y_sparse, secint)
@@ -426,43 +427,43 @@ async def main():
 
     sec_x = SparseVectorNaivePSI(x_sparse, secint)
     sec_y = SparseVectorNaivePSI(y_sparse, secint)
-    print("===")
     start = datetime.now()
     z = await sec_x.dot(sec_y)
     print(await mpc.output(z))
     end = datetime.now()
     delta_sparse = end - start
     print("Time for sparse psi:", delta_sparse.total_seconds())
+    print("===")
 
     sec_x = SparseVectorNaivePSIOpti(x_sparse, secint)
     sec_y = SparseVectorNaivePSIOpti(y_sparse, secint)
-    print("===")
     start = datetime.now()
     z = await sec_x.dot(sec_y)
     print(await mpc.output(z))
     end = datetime.now()
     delta_sparse = end - start
     print("Time for sparse psi optimized:", delta_sparse.total_seconds())
+    print("===")
 
     # sec_x = SparseVectorORAM(x_sparse, secint)
     # sec_y = SparseVectorORAM(y_sparse, secint)
-    # print("===")
     # start = datetime.now()
     # z = await sec_x.dot(sec_y)
     # print(await mpc.output(z))
     # end = datetime.now()
     # delta_sparse = end - start
     # print("Time for sparse ORAM:", delta_sparse.total_seconds())
+    # print("===")
 
     sec_x = SparseVectorQuicksort(x_sparse, secint)
     sec_y = SparseVectorQuicksort(y_sparse, secint)
-    print("===")
     start = datetime.now()
     z = await sec_x.dot(sec_y)
     print(await mpc.output(z))
     end = datetime.now()
     delta_sparse = end - start
     print("Time for sparse quicksort:", delta_sparse.total_seconds())
+    print("===")
 
 
 async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
