@@ -2,3 +2,4 @@ mpyc
 scipy
 numpy
 gmpy2
+tqdm

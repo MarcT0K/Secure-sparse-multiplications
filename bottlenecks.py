@@ -1,9 +1,12 @@
 from mpyc.runtime import mpc
+import mpyc.numpy as sec_np
 import scipy.sparse
 import numpy as np
 from datetime import datetime
 import random
 import gmpy2
+from quicksort import quicksort
+import tqdm
 
 
 class SortableTuple:
@@ -354,6 +357,88 @@ async def benchmark_bsgn():
     print("Average sgn runtime:\t", delta.total_seconds() / NB_REP)
 
 
+async def benchmark_sort(n_dim):
+    print("Benchmark for oblivious sort coroutines")
+    sectype = mpc.SecInt(64)
+    rand_list = [sectype(random.randint(0, 1024)) for _ in range(n_dim)]
+    NB_REP = 10
+    start = datetime.now()
+    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Batcher sort"):
+        mpc.sorted(rand_list)
+    end = datetime.now()
+    delta = end - start
+    print("Average batcher sort runtime:\t", delta.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Quick sort"):
+        await quicksort(rand_list, sectype)
+    end = datetime.now()
+    delta = end - start
+    print("Average batcher sort runtime:\t", delta.total_seconds() / NB_REP)
+    print("===END")
+
+
+async def benchmark_vectorized_comp(n_dim):
+    print("Benchmark for vectorized comparison")
+    rand_list = [random.randint(-1024, 1024) for _ in range(n_dim)]
+
+    sectype = mpc.SecInt(64)
+    sec_list = sectype.array(sec_np.np.array(rand_list))
+
+    NB_REP = 10
+    start = datetime.now()
+    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Naive comparison"):
+        for j in range(len(sec_list)):
+            x = mpc.sgn(sec_list[j], LT=True)
+    end = datetime.now()
+    delta = end - start
+    print("Average naive inequality runtime:\t", delta.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Vectorized comparison"):
+        res = mpc.np_sgn(sec_list, LT=True)
+
+    end = datetime.now()
+    delta = end - start
+    print("Average vectorized inequality runtime:\t", delta.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Naive comparison"):
+        for j in range(len(sec_list)):
+            x = mpc.sgn(sec_list[j], EQ=True)
+    end = datetime.now()
+    delta = end - start
+    print("Average naive equality runtime:\t", delta.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Vectorized comparison"):
+        res = mpc.np_sgn(sec_list, EQ=True)
+
+    end = datetime.now()
+    delta = end - start
+    print("Average vectorized equality runtime:\t", delta.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Naive comparison"):
+        for j in range(len(sec_list)):
+            x = await mpc.is_zero_public(sec_list[j])
+            print(x, end=" ")
+    end = datetime.now()
+    delta = end - start
+    print("Average naive public equality runtime:\t", delta.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Vectorized comparison"):
+        res = await mpc.np_is_zero_public(sec_list)
+
+    end = datetime.now()
+    delta = end - start
+    print(
+        "Average vectorized public equality runtime:\t", delta.total_seconds() / NB_REP
+    )
+    print("===END")
+
+
 if __name__ == "__main__":
     # mpc.run(bottleneck_comparison(1000))
     # mpc.run(bottleneck_comparison(10000))
@@ -362,4 +447,6 @@ if __name__ == "__main__":
     # mpc.run(other_measurements_32bits())
     # mpc.run(investigation())
     # mpc.run(overflow())
-    mpc.run(benchmark_bsgn())
+    # mpc.run(benchmark_bsgn())
+    # mpc.run(benchmark_sort(100))
+    mpc.run(benchmark_vectorized_comp(1000))

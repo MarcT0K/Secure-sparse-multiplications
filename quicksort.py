@@ -18,10 +18,11 @@ async def partition(sec_list, key=None):
     res = sec_list.copy()
     i = -1
     for j in range(len(res) - 1):
-        if key == None:
+        if key is None:
             sec_comp = res[j] <= res[len(res) - 1]
         else:
             sec_comp = key(res[j]) <= key(res[len(res) - 1])
+
         comp = await mpc.output(sec_comp)
         if comp:
             i += 1
