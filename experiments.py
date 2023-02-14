@@ -504,7 +504,7 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
     print("Started experiment with n =", n_dim)
     if mpc.pid == 0:
         x_sparse = scipy.sparse.random(
-            n_dim, m_dim, density=sparsity, dtype=np.int16
+            m_dim, n_dim, density=sparsity, dtype=np.int16
         ).astype(int)
     else:
         x_sparse = None
@@ -515,12 +515,12 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
     sec_dense_t = DenseMatrix(dense_mat.transpose(), sectype=secint)
     sec_dense = DenseMatrix(dense_mat, sectype=secint)
 
-    start = datetime.now()
-    z = sec_dense_t.dot(sec_dense)
-    await mpc.output(z.get(0, 0))
-    end = datetime.now()
-    delta_dense = end - start
-    print("Time for dense:", delta_dense.total_seconds())
+    # start = datetime.now()
+    # z = sec_dense_t.dot(sec_dense)
+    # await mpc.output(z.get(0, 0))
+    # end = datetime.now()
+    # delta_dense = end - start
+    # print("Time for dense:", delta_dense.total_seconds())
 
     # sec_dense_t = DenseMatrixNaive(dense_mat.transpose(), sectype=secint)
     # sec_dense = DenseMatrixNaive(dense_mat, sectype=secint)
@@ -595,3 +595,17 @@ if __name__ == "__main__":
 # - sparse-dense multiplication using DORAM
 # - merging network to improve multiplications
 # - DORAM use for sparse matrix covariance
+
+
+# Started experiment with n = 1000
+# Time for dense: 3.542665
+# Time for dense naive: 222.105625
+# Time for sparse with batcher sort: 3.93241
+# Time for sparse with quick sort: 2.883241
+# === END
+# Started experiment with n = 10000
+# Time for dense: 46.059045
+# Time for dense naive: 2267.408427
+# Time for sparse with batcher sort: 132.027157
+# Time for sparse with quick sort: 144.004696
+# === END
