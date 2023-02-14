@@ -77,8 +77,12 @@ async def sparse_vector_dot_psi_opti(vect1, vect2, sectype):
     val2_ext = mpc.np_fromlist(val2_ext)
 
     eq_ind = await mpc.np_is_zero_public(mpc.np_subtract(ind1_ext, ind2_ext))
-    mult_res = mpc.np_multiply(val2_ext[eq_ind], val1_ext[eq_ind])
-    res = mpc.np_sum(mult_res)
+
+    if eq_ind.any():
+        mult_res = mpc.np_multiply(val2_ext[eq_ind], val1_ext[eq_ind])
+        res = mpc.np_sum(mult_res)
+    else:
+        res = sectype(0)
     return res
 
 
