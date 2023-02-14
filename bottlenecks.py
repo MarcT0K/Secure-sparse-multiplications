@@ -56,9 +56,10 @@ def sparse_vector_dot_naive_no_comp(vect1, vect2):
     return res
 
 
-def sparse_vector_dot(vect1, vect2):
+async def sparse_vector_dot(vect1, vect2):
     unsorted = vect1 + vect2
     sorted_list = mpc.sorted(unsorted, key=SortableTuple)
+
     res = 0
     for i in range(len(sorted_list) - 1):
         temp = sorted_list[i][1] * sorted_list[i + 1][1]
@@ -87,13 +88,19 @@ async def bottleneck_comparison(n_dim):
     )
     sectype = mpc.SecInt(64)
     to_sec_int = lambda x: sectype(int(x))
+    if mpc.pid == 0:
+        x_sparse = scipy.sparse.random(
+            n_dim, 1, density=density, dtype=np.int16
+        ).astype(int)
+        y_sparse = scipy.sparse.random(
+            n_dim, 1, density=density, dtype=np.int16
+        ).astype(int)
+    else:
+        x_sparse = None
+        y_sparse = None
 
-    x_sparse = scipy.sparse.random(n_dim, 1, density=density, dtype=np.int16).astype(
-        int
-    )
-    y_sparse = scipy.sparse.random(n_dim, 1, density=density, dtype=np.int16).astype(
-        int
-    )
+    x_sparse = await mpc.transfer(x_sparse, senders=0)
+    y_sparse = await mpc.transfer(y_sparse, senders=0)
 
     x_sec = []
     for i, _j, v in zip(x_sparse.row, x_sparse.col, x_sparse.data):
@@ -104,24 +111,28 @@ async def bottleneck_comparison(n_dim):
 
     start = datetime.now()
     z = sparse_vector_dot_no_sort(x_sec, y_sec)
+    await mpc.output(z)
     end = datetime.now()
     delta_sparse = end - start
     print("Time without sort:", delta_sparse.total_seconds())
 
     start = datetime.now()
-    z = sparse_vector_dot(x_sec, y_sec)
+    z = await sparse_vector_dot(x_sec, y_sec)
+    await mpc.output(z)
     end = datetime.now()
     delta_sparse = end - start
     print("Time with sort:", delta_sparse.total_seconds())
 
     start = datetime.now()
     z = sparse_vector_dot_naive(x_sec, y_sec)
+    await mpc.output(z)
     end = datetime.now()
     delta_sparse = end - start
     print("Time naive dot with comparsion:", delta_sparse.total_seconds())
 
     start = datetime.now()
     z = sparse_vector_dot_naive_no_comp(x_sec, y_sec)
+    await mpc.output(z)
     end = datetime.now()
     delta_sparse = end - start
     print("Time naive dot without comparison:", delta_sparse.total_seconds())
@@ -407,9 +418,9 @@ async def benchmark_vectorized_comp(n_dim):
 
 async def main():
     await mpc.start()
-    # await bottleneck_comparison(1000)
-    # await bottleneck_comparison(10000)
-    # await bottleneck_comparison(100000)
+    await bottleneck_comparison(1000)
+    await bottleneck_comparison(10000)
+    await bottleneck_comparison(100000)
     await other_measurements()
     # await other_measurements(32)
     # await investigation()
