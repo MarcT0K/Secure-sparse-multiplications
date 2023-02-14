@@ -128,129 +128,83 @@ async def bottleneck_comparison(n_dim):
     print("===")
 
 
-async def other_measurements():
+async def other_measurements(bit_length=64):
     print("Other measurements")
-    await mpc.start()
-    sectype = mpc.SecInt(64)
+    sectype = mpc.SecInt(bit_length)
     NB_REP = 1000
 
     rand_list = [sectype(random.randint(0, 1024)) for _ in range(100)]
 
     start = datetime.now()
-    mpc.random.shuffle(sectype, rand_list)
+    for i in range(NB_REP):
+        await mpc.output(rand_list[0])
     end = datetime.now()
-    delta_sparse = end - start
-    print(f"Shuffle runtime ({len(rand_list)} elements):", delta_sparse.total_seconds())
+    delta_reveal = end - start
+    print("Reveal runtime:", delta_reveal.total_seconds() / NB_REP)
 
     start = datetime.now()
-    mpc.sorted(rand_list)
+    mpc.random.shuffle(sectype, rand_list)
+    await mpc.output(rand_list[0])
     end = datetime.now()
-    delta_sparse = end - start
-    print(f"Sort runtime ({len(rand_list)} elements):", delta_sparse.total_seconds())
+    delta = end - start
+    print(f"Shuffle runtime ({len(rand_list)} elements):", delta.total_seconds())
+
+    start = datetime.now()
+    x = mpc.sorted(rand_list)
+    await mpc.output(x[1])
+    end = datetime.now()
+    delta = end - start
+    print(f"Sort runtime ({len(rand_list)} elements):", delta.total_seconds())
 
     rand_list_tuple = [
         [sectype(random.randint(0, 1024)), sectype(0)] for _ in range(100)
     ]
     start = datetime.now()
-    mpc.sorted(rand_list_tuple, key=SortableTuple)
+    x = mpc.sorted(rand_list_tuple, key=SortableTuple)
+    await mpc.output(x[1][0])
     end = datetime.now()
-    delta_sparse = end - start
-    print(f"Sort runtime ({len(rand_list)} tuples):", delta_sparse.total_seconds())
+    delta = end - start
+    print(f"Sort runtime ({len(rand_list)} tuples):", delta.total_seconds())
 
     start = datetime.now()
     for _i in range(NB_REP):
-        mpc.np_fromlist(rand_list)
+        sec_list = mpc.np_fromlist(rand_list)
     end = datetime.now()
-    delta_sparse = end - start
+    delta = end - start
     print(
         f"Average secure-list-transformation runtime ({len(rand_list)} elements):",
-        delta_sparse.total_seconds() / NB_REP,
+        delta.total_seconds() / NB_REP,
     )
 
     start = datetime.now()
     for _i in range(NB_REP):
-        rand_list[1] == rand_list[2]
+        b = rand_list[1] == rand_list[2]
+        await mpc.output(b)
     end = datetime.now()
-    delta_sparse = end - start
-    print("Average equality runtime:", delta_sparse.total_seconds() / NB_REP)
+    delta = end - start - delta_reveal
+    print("Average equality runtime:", delta.total_seconds() / NB_REP)
 
     start = datetime.now()
     for _i in range(NB_REP):
-        rand_list[1] < rand_list[2]
+        b = rand_list[1] < rand_list[2]
+        await mpc.output(b)
     end = datetime.now()
-    delta_sparse = end - start
-    print("Average inequality runtime:", delta_sparse.total_seconds() / NB_REP)
+    delta = end - start - delta_reveal
+    print("Average inequality runtime:", delta.total_seconds() / NB_REP)
 
     start = datetime.now()
     for _i in range(NB_REP):
-        mpc.eq_public(rand_list[1], rand_list[2])
+        b = mpc.eq_public(rand_list[1], rand_list[2])
     end = datetime.now()
-    delta_sparse = end - start
-    print("Average public equality runtime:", delta_sparse.total_seconds() / NB_REP)
-
-    start = datetime.now()
-    for _i in range(NB_REP):
-        _ = rand_list[1] * rand_list[2]
-    end = datetime.now()
-    delta_sparse = end - start
-    print("Average multiplication runtime:", delta_sparse.total_seconds() / NB_REP)
-    await mpc.shutdown()
-
-
-async def other_measurements_32bits():
-    print("Other measurements")
-    sectype = mpc.SecInt(32)
-    rand_list = [sectype(random.randint(0, 1024)) for _ in range(100)]
-
-    start = datetime.now()
-    mpc.random.shuffle(sectype, rand_list)
-    end = datetime.now()
-    delta_sparse = end - start
-    print(f"Shuffle runtime ({len(rand_list)} elements):", delta_sparse.total_seconds())
-
-    start = datetime.now()
-    mpc.sorted(rand_list)
-    end = datetime.now()
-    delta_sparse = end - start
-    print(f"Sort runtime ({len(rand_list)} elements):", delta_sparse.total_seconds())
-
-    rand_list_tuple = [
-        [sectype(random.randint(0, 1024)), sectype(0)] for _ in range(100)
-    ]
-    start = datetime.now()
-    mpc.sorted(rand_list_tuple, key=SortableTuple)
-    end = datetime.now()
-    delta_sparse = end - start
-    print(f"Sort runtime ({len(rand_list)} tuples):", delta_sparse.total_seconds())
-
-    NB_REP = 1000
-    start = datetime.now()
-    for _i in range(NB_REP):
-        rand_list[1] == rand_list[2]
-    end = datetime.now()
-    delta_sparse = end - start
-    print("Average equality runtime:", delta_sparse.total_seconds() / NB_REP)
-
-    start = datetime.now()
-    for _i in range(NB_REP):
-        rand_list[1] < rand_list[2]
-    end = datetime.now()
-    delta_sparse = end - start
-    print("Average inequality runtime:", delta_sparse.total_seconds() / NB_REP)
-
-    start = datetime.now()
-    for _i in range(NB_REP):
-        mpc.eq_public(rand_list[1], rand_list[2])
-    end = datetime.now()
-    delta_sparse = end - start
-    print("Average public equality runtime:", delta_sparse.total_seconds() / NB_REP)
+    delta = end - start
+    print("Average public equality runtime:", delta.total_seconds() / NB_REP)
 
     start = datetime.now()
     for _i in range(NB_REP):
         _ = rand_list[1] * rand_list[2]
     end = datetime.now()
-    delta_sparse = end - start
-    print("Average multiplication runtime:", delta_sparse.total_seconds() / NB_REP)
+    delta = end - start
+    print("Average multiplication runtime:", delta.total_seconds() / NB_REP)
 
 
 async def investigation():
@@ -451,14 +405,43 @@ async def benchmark_vectorized_comp(n_dim):
     print("===END")
 
 
+async def main():
+    await mpc.start()
+    # await bottleneck_comparison(1000)
+    # await bottleneck_comparison(10000)
+    # await bottleneck_comparison(100000)
+    await other_measurements()
+    # await other_measurements(32)
+    # await investigation()
+    # await overflow()
+    # await benchmark_bsgn()
+    # await benchmark_sort(100)
+    # await benchmark_vectorized_comp(1000)
+    await mpc.shutdown()
+
+
 if __name__ == "__main__":
-    # mpc.run(bottleneck_comparison(1000))
-    # mpc.run(bottleneck_comparison(10000))
-    # mpc.run(bottleneck_comparison(100000))
-    mpc.run(other_measurements())
-    # mpc.run(other_measurements_32bits())
-    # mpc.run(investigation())
-    # mpc.run(overflow())
-    # mpc.run(benchmark_bsgn())
-    # mpc.run(benchmark_sort(100))
-    # mpc.run(benchmark_vectorized_comp(1000))
+    mpc.run(main())
+
+
+# MEASUREMENTS FOR M=1
+# Reveal runtime: 9.9545e-05
+# Shuffle runtime (100 elements): 0.48258
+# Sort runtime (100 elements): 3.31191
+# Sort runtime (100 tuples): 2.888071
+# Average secure-list-transformation runtime (100 elements): 1.712e-05
+# Average equality runtime: 0.001781021
+# Average inequality runtime: 0.0021535829999999997
+# Average public equality runtime: 5.0786e-05
+# Average multiplication runtime: 1.7519e-05
+
+# MEASUREMENTS FOR M=3
+# Reveal runtime: 0.00032937300000000005
+# Shuffle runtime (100 elements): 0.846489
+# Sort runtime (100 elements): 6.604492
+# Sort runtime (100 tuples): 7.259646
+# Average secure-list-transformation runtime (100 elements): 2.8604000000000003e-05
+# Average equality runtime: 0.004912445
+# Average inequality runtime: 0.005978094
+# Average public equality runtime: 3.6703e-05
+# Average multiplication runtime: 2.2154e-05
