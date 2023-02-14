@@ -502,9 +502,14 @@ async def benchmark_dot_product(n_dim=1000, density=0.1):
 async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
     secint = mpc.SecInt(64)
     print("Started experiment with n =", n_dim)
-    x_sparse = scipy.sparse.random(
-        n_dim, m_dim, density=sparsity, dtype=np.int16
-    ).astype(int)
+    if mpc.pid == 0:
+        x_sparse = scipy.sparse.random(
+            n_dim, m_dim, density=sparsity, dtype=np.int16
+        ).astype(int)
+    else:
+        x_sparse = None
+
+    x_sparse = await mpc.transfer(x_sparse, senders=0)
 
     dense_mat = x_sparse.astype(int).todense()
     sec_dense_t = DenseMatrix(dense_mat.transpose(), sectype=secint)
@@ -512,18 +517,19 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
 
     start = datetime.now()
     z = sec_dense_t.dot(sec_dense)
+    await mpc.output(z.get(0, 0))
     end = datetime.now()
     delta_dense = end - start
     print("Time for dense:", delta_dense.total_seconds())
 
-    sec_dense_t = DenseMatrixNaive(dense_mat.transpose(), sectype=secint)
-    sec_dense = DenseMatrixNaive(dense_mat, sectype=secint)
+    # sec_dense_t = DenseMatrixNaive(dense_mat.transpose(), sectype=secint)
+    # sec_dense = DenseMatrixNaive(dense_mat, sectype=secint)
 
-    start = datetime.now()
-    z = sec_dense_t.dot(sec_dense)
-    end = datetime.now()
-    delta_dense = end - start
-    print("Time for dense naive:", delta_dense.total_seconds())
+    # start = datetime.now()
+    # z = sec_dense_t.dot(sec_dense)
+    # end = datetime.now()
+    # delta_dense = end - start
+    # print("Time for dense naive:", delta_dense.total_seconds())
 
     sec_x = SparseMatrixColumn(x_sparse.transpose(), secint)
     sec_y = SparseMatrixRow(x_sparse, secint)
