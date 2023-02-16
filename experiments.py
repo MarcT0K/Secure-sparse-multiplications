@@ -9,32 +9,10 @@ from mpyc.runtime import mpc
 from datetime import datetime
 
 from sparse_dot_vector import *
+from sortable_tuple import SortableTuple
 
 SparseMatrixListType = List[List[int]]
 ScipySparseMatType = scipy.sparse._coo.coo_matrix
-
-
-class SortableTuple:
-    def __init__(self, tup):
-        self._tup = tuple(tup)
-
-    def __lt__(self, other):
-        if len(self._tup) != len(other._tup):
-            raise ValueError("Tuples must be of same size")
-        return SortableTuple._lt_tuples(self._tup, other._tup)
-
-    def __ge__(self, other):
-        return ~self.__lt__(other)
-
-    def _lt_tuples(tup1, tup2):
-        first_comp = tup1[0] < tup2[0]
-        if len(tup1) > 2:  # The last element is not subject of the sort in our case
-            equal_comp = tup1[0] == tup2[0]
-            recursive_comp = SortableTuple._lt_tuples(tup1[1:], tup2[1:])
-            # first_comp or (recursive_comp and equal_comp)
-            return first_comp | (recursive_comp & equal_comp)
-        else:
-            return first_comp
 
 
 class SecureMatrix:
@@ -402,7 +380,7 @@ class SparseVectorORAM(SecureMatrix):
             print(f"({await mpc.output(i)}, {await mpc.output(v)})")
 
 
-async def benchmark_dot_product(n_dim=1000, density=0.1):
+async def benchmark_dot_product(n_dim=10000, density=0.001):
     print("Sparse dot benchmark: n=", n_dim, " density=", density)
     secint = mpc.SecInt(64)
 
@@ -452,14 +430,14 @@ async def benchmark_dot_product(n_dim=1000, density=0.1):
     delta_sparse = end - start
     print("Time for sparse:", delta_sparse.total_seconds())
 
-    # sec_x = SparseVectorNaive(x_sparse, secint)
-    # sec_y = SparseVectorNaive(y_sparse, secint)
-    # start = datetime.now()
-    # z = sec_x.dot(sec_y)
-    # assert(await mpc.output(z) == real_res)
-    # end = datetime.now()
-    # delta_sparse = end - start
-    # print("Time for sparse naive:", delta_sparse.total_seconds())
+    sec_x = SparseVectorNaive(x_sparse, secint)
+    sec_y = SparseVectorNaive(y_sparse, secint)
+    start = datetime.now()
+    z = sec_x.dot(sec_y)
+    assert await mpc.output(z) == real_res
+    end = datetime.now()
+    delta_sparse = end - start
+    print("Time for sparse naive:", delta_sparse.total_seconds())
 
     sec_x = SparseVectorNaivePSI(x_sparse, secint)
     sec_y = SparseVectorNaivePSI(y_sparse, secint)
@@ -488,14 +466,14 @@ async def benchmark_dot_product(n_dim=1000, density=0.1):
     # delta_sparse = end - start
     # print("Time for sparse ORAM:", delta_sparse.total_seconds())
 
-    # sec_x = SparseVectorQuicksort(x_sparse, secint)
-    # sec_y = SparseVectorQuicksort(y_sparse, secint)
-    # start = datetime.now()
-    # z = await sec_x.dot(sec_y)
-    # assert(await mpc.output(z) == real_res)
-    # end = datetime.now()
-    # delta_sparse = end - start
-    # print("Time for sparse quicksort:", delta_sparse.total_seconds())
+    sec_x = SparseVectorQuicksort(x_sparse, secint)
+    sec_y = SparseVectorQuicksort(y_sparse, secint)
+    start = datetime.now()
+    z = await sec_x.dot(sec_y)
+    assert await mpc.output(z) == real_res
+    end = datetime.now()
+    delta_sparse = end - start
+    print("Time for sparse quicksort:", delta_sparse.total_seconds())
     print("===END")
 
 
@@ -515,12 +493,12 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
     sec_dense_t = DenseMatrix(dense_mat.transpose(), sectype=secint)
     sec_dense = DenseMatrix(dense_mat, sectype=secint)
 
-    # start = datetime.now()
-    # z = sec_dense_t.dot(sec_dense)
-    # await mpc.output(z.get(0, 0))
-    # end = datetime.now()
-    # delta_dense = end - start
-    # print("Time for dense:", delta_dense.total_seconds())
+    start = datetime.now()
+    z = sec_dense_t.dot(sec_dense)
+    await mpc.output(z.get(0, 0))
+    end = datetime.now()
+    delta_dense = end - start
+    print("Time for dense:", delta_dense.total_seconds())
 
     # sec_dense_t = DenseMatrixNaive(dense_mat.transpose(), sectype=secint)
     # sec_dense = DenseMatrixNaive(dense_mat, sectype=secint)
@@ -553,10 +531,10 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
 
 async def main():
     await mpc.start()
-    # await benchmark_dot_product()
-    await benchmark_sparse_sparse_mat_mult(1000)
-    await benchmark_sparse_sparse_mat_mult(10000)
-    await benchmark_sparse_sparse_mat_mult(100000)
+    await benchmark_dot_product()
+    # await benchmark_sparse_sparse_mat_mult(1000)
+    # await benchmark_sparse_sparse_mat_mult(10000)
+    # await benchmark_sparse_sparse_mat_mult(100000)
     await mpc.shutdown()
 
 
@@ -609,3 +587,12 @@ if __name__ == "__main__":
 # Time for sparse with batcher sort: 132.027157
 # Time for sparse with quick sort: 144.004696
 # === END
+
+
+# Started experiment with n = 1000
+# Time for sparse with batcher sort: 10.009088
+# Time for sparse with quick sort: 6.983934
+# === END
+# Started experiment with n = 10000 => Dense plante ici
+# Time for sparse with batcher sort: 6531.993056
+# Time for sparse with quick sort: 11090.920609

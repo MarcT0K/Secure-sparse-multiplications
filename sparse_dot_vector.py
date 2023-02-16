@@ -1,6 +1,5 @@
 from mpyc.runtime import mpc
-from mpyc.numpy import np
-from experiments import SortableTuple
+from sortable_tuple import SortableTuple
 from quicksort import quicksort
 
 
