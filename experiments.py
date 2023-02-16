@@ -499,12 +499,14 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
     print("===END")
 
 
-async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
+async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, sparsity=0.001):
     secint = mpc.SecInt(64)
-    print("Started experiment with n =", n_dim)
+    print(
+        f"Started experiment with sparse matrix multiplication ({n_dim}x{m_dim}), sparsity={sparsity}"
+    )
     if mpc.pid == 0:
         x_sparse = scipy.sparse.random(
-            m_dim, n_dim, density=sparsity, dtype=np.int16
+            n_dim, m_dim, density=sparsity, dtype=np.int16
         ).astype(int)
     else:
         x_sparse = None
@@ -553,37 +555,15 @@ async def benchmark_sparse_sparse_mat_mult(n_dim, m_dim=100, sparsity=0.001):
 
 async def main():
     await mpc.start()
-    await benchmark_dot_product()
-    # await benchmark_sparse_sparse_mat_mult(1000)
-    # await benchmark_sparse_sparse_mat_mult(10000)
-    # await benchmark_sparse_sparse_mat_mult(100000)
+    # await benchmark_dot_product()
+    await benchmark_sparse_sparse_mat_mult(m_dim=1000)
+    # await benchmark_sparse_sparse_mat_mult(m_dim=10000)
+    # await benchmark_sparse_sparse_mat_mult(m_dim=100000)
     await mpc.shutdown()
 
 
 if __name__ == "__main__":
     mpc.run(main())
-
-
-# Real result: 425914226
-# ===
-# 425914226
-# Time for dense: 0.033948
-# ===
-# 425914226
-# Time for dense unoptimized: 2.73972
-# ===
-# 425914226
-# Time for sparse: 12.926973
-# ===
-# 425914226
-# Time for sparse psi: 6.767824
-# ===
-# 425914226
-# Time for sparse psi optimized: 3.574228
-# ===
-# 425914226
-# Time for sparse quicksort: 10.478738
-# ===
 
 
 # Problems:
@@ -596,25 +576,5 @@ if __name__ == "__main__":
 # - merging network to improve multiplications
 # - DORAM use for sparse matrix covariance
 
-
-# Started experiment with n = 1000
-# Time for dense: 3.542665
-# Time for dense naive: 222.105625
-# Time for sparse with batcher sort: 3.93241
-# Time for sparse with quick sort: 2.883241
-# === END
-# Started experiment with n = 10000
-# Time for dense: 46.059045
-# Time for dense naive: 2267.408427
-# Time for sparse with batcher sort: 132.027157
-# Time for sparse with quick sort: 144.004696
-# === END
-
-
-# Started experiment with n = 1000
-# Time for sparse with batcher sort: 10.009088
-# Time for sparse with quick sort: 6.983934
-# === END
-# Started experiment with n = 10000 => Dense plante ici
-# Time for sparse with batcher sort: 6531.993056
-# Time for sparse with quick sort: 11090.920609
+# Time for dense: 139.481098
+# Time for sparse with batcher sort: 170.852584

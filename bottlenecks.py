@@ -175,7 +175,7 @@ async def other_measurements(bit_length=64):
     await mpc.output(x[1][0])
     end = datetime.now()
     delta = end - start
-    print(f"Sort runtime ({len(rand_list)} tuples):", delta.total_seconds())
+    print(f"Sort runtime ({len(rand_list_tuple)} tuples):", delta.total_seconds())
 
     start = datetime.now()
     for _i in range(NB_REP):
@@ -418,9 +418,9 @@ async def benchmark_vectorized_comp(n_dim):
 
 async def main():
     await mpc.start()
-    await bottleneck_comparison(1000)
-    await bottleneck_comparison(10000)
-    await bottleneck_comparison(100000)
+    # await bottleneck_comparison(1000)
+    # await bottleneck_comparison(10000)
+    # await bottleneck_comparison(100000)
     await other_measurements()
     # await other_measurements(32)
     # await investigation()
