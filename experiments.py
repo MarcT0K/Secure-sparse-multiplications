@@ -305,6 +305,19 @@ class SparseVectorNaive(SparseVector):
             raise NotImplementedError
 
 
+class SparseVectorNaiveOpti(SparseVector):
+    def __init__(self, sparse_mat, sectype=None):
+        super().__init__(sparse_mat, sectype)
+
+    def dot(self, other):
+        if isinstance(other, SparseVectorNaiveOpti):
+            if self.shape != other.shape:
+                raise ValueError("Incompatible vector size")
+            return sparse_vector_dot_naive_opti(self._mat, other._mat)
+        else:
+            raise NotImplementedError
+
+
 class SparseVectorNaivePSI(SparseVector):
     def __init__(self, sparse_mat, sectype=None):
         if sparse_mat.shape[1] != 1:
@@ -380,7 +393,7 @@ class SparseVectorORAM(SecureMatrix):
             print(f"({await mpc.output(i)}, {await mpc.output(v)})")
 
 
-async def benchmark_dot_product(n_dim=10000, density=0.001):
+async def benchmark_dot_product(n_dim=10**5, density=0.001):
     print("Sparse dot benchmark: n=", n_dim, " density=", density)
     secint = mpc.SecInt(64)
 
@@ -438,6 +451,15 @@ async def benchmark_dot_product(n_dim=10000, density=0.001):
     end = datetime.now()
     delta_sparse = end - start
     print("Time for sparse naive:", delta_sparse.total_seconds())
+
+    sec_x = SparseVectorNaiveOpti(x_sparse, secint)
+    sec_y = SparseVectorNaiveOpti(y_sparse, secint)
+    start = datetime.now()
+    z = sec_x.dot(sec_y)
+    assert await mpc.output(z) == real_res
+    end = datetime.now()
+    delta_sparse = end - start
+    print("Time for sparse naive opti:", delta_sparse.total_seconds())
 
     sec_x = SparseVectorNaivePSI(x_sparse, secint)
     sec_y = SparseVectorNaivePSI(y_sparse, secint)

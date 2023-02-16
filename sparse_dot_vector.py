@@ -39,6 +39,31 @@ def sparse_vector_dot_naive(vect1, vect2):
     return res
 
 
+def sparse_vector_dot_naive_opti(vect1, vect2):
+    val1 = [vect1[i][1] for i in range(len(vect1))]
+    ind1 = [vect1[i][0] for i in range(len(vect1))]
+    val1_ext = mpc.np_fromlist(val1 * len(vect2))
+    ind1_ext = mpc.np_fromlist(ind1 * len(vect2))
+
+    val2 = [vect2[i][1] for i in range(len(vect1))]
+    ind2 = [vect2[i][0] for i in range(len(vect1))]
+
+    val2_ext = []
+    ind2_ext = []
+    for j in range(len(vect2)):
+        val2_ext += [val2[j]] * len(vect1)
+        ind2_ext += [ind2[j]] * len(vect1)
+    ind2_ext = mpc.np_fromlist(ind2_ext)
+    val2_ext = mpc.np_fromlist(val2_ext)
+
+    eq_res = mpc.np_equal(ind1_ext, ind2_ext)
+
+    mult_res = mpc.np_multiply(val2_ext, val1_ext)
+    mult_res = mpc.np_multiply(mult_res, eq_res)
+    res = mpc.np_sum(mult_res)
+    return res
+
+
 async def sparse_vector_dot_psi(vect1, vect2, sectype):
     res = sectype(0)
     mpc.random.shuffle(sectype, vect1)
@@ -112,17 +137,6 @@ def sparse_vector_dot_merge(vect1, vect2, sectype, key=None):  # TODO: test
         sec_comp = sorted_list[i][0] == sorted_list[i + 1][0]
         temp = mpc.if_else(sec_comp, temp, 0)
         res += temp
-    return res
-
-
-def sparse_vector_dot_naive_bis(vect1, vect2):
-    res = 0
-    for i in range(len(vect1)):
-        for j in range(len(vect2)):
-            temp = vect1[i][1] * vect2[j][1]
-            sec_comp = mpc.SecInt(64)(1) // ((vect1[i][0] - vect2[j][0]) ** 2 + 1)
-            # Idea: use a fixed-point number to compute a floor_div
-            res += temp * sec_comp
     return res
 
 
