@@ -555,8 +555,8 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, sparsity=0.0
 
 async def main():
     await mpc.start()
-    # await benchmark_dot_product()
-    await benchmark_sparse_sparse_mat_mult(m_dim=1000)
+    await benchmark_dot_product()
+    # await benchmark_sparse_sparse_mat_mult(m_dim=1000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=10000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=100000)
     await mpc.shutdown()
@@ -566,15 +566,6 @@ if __name__ == "__main__":
     mpc.run(main())
 
 
-# Problems:
-# - If we have a comparison x100 more expensive than a multiplication, the dot product will never be profitable for sparsity above 1%
-# - Public inequality contrary to public equality cannot bring improvement
-
-# Current directions:
-# - public comparison via square root (Secure sqrt: https://eprint.iacr.org/2012/405)
-# - sparse-dense multiplication using DORAM
-# - merging network to improve multiplications
-# - DORAM use for sparse matrix covariance
-
+# Started experiment with sparse matrix multiplication (1000x1000), sparsity=0.001
 # Time for dense: 139.481098
 # Time for sparse with batcher sort: 170.852584

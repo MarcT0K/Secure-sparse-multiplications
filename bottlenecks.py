@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 import random
 import gmpy2
-from quicksort import quicksort
+from quicksort import quicksort, parallel_quicksort
 import tqdm
 
 
@@ -336,23 +336,38 @@ async def benchmark_bsgn():
 
 
 async def benchmark_sort(n_dim):
-    print("Benchmark for oblivious sort coroutines")
+    print("Benchmark for oblivious sort coroutines with n=", n_dim)
     sectype = mpc.SecInt(64)
-    rand_list = [sectype(random.randint(0, 1024)) for _ in range(n_dim)]
+    rand_list = [random.randint(0, 1024) for _ in range(n_dim)]
+    sorted_rand_list = rand_list.copy()
+    sorted_rand_list.sort()
+    sec_rand_list = [sectype(r) for r in rand_list]
+
     NB_REP = 10
     start = datetime.now()
     for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Batcher sort"):
-        mpc.sorted(rand_list)
+        sorted_sec_list = mpc.sorted(sec_rand_list)
+        assert await mpc.output(sorted_sec_list) == sorted_rand_list
     end = datetime.now()
     delta = end - start
     print("Average batcher sort runtime:\t", delta.total_seconds() / NB_REP)
 
     start = datetime.now()
     for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Quick sort"):
-        await quicksort(rand_list, sectype)
+        sorted_sec_list = await quicksort(sec_rand_list, sectype)
+        assert await mpc.output(sorted_sec_list) == sorted_rand_list
     end = datetime.now()
     delta = end - start
-    print("Average batcher sort runtime:\t", delta.total_seconds() / NB_REP)
+    print("Average quicksort sort runtime:\t", delta.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Parellel quick sort"):
+        print(rand_list)
+        sorted_sec_list = await parallel_quicksort(sec_rand_list, sectype)
+        assert await mpc.output(sorted_sec_list) == sorted_rand_list
+    end = datetime.now()
+    delta = end - start
+    print("Average parallel quicksort sort runtime:\t", delta.total_seconds() / NB_REP)
     print("===END")
 
 
@@ -421,12 +436,12 @@ async def main():
     # await bottleneck_comparison(1000)
     # await bottleneck_comparison(10000)
     # await bottleneck_comparison(100000)
-    await other_measurements()
+    # await other_measurements()
     # await other_measurements(32)
     # await investigation()
     # await overflow()
     # await benchmark_bsgn()
-    # await benchmark_sort(100)
+    await benchmark_sort(10)
     # await benchmark_vectorized_comp(1000)
     await mpc.shutdown()
 
