@@ -338,7 +338,12 @@ async def benchmark_bsgn():
 async def benchmark_sort(n_dim):
     print("Benchmark for oblivious sort coroutines with n=", n_dim)
     sectype = mpc.SecInt(64)
-    rand_list = [random.randint(0, 1024) for _ in range(n_dim)]
+    if mpc.pid == 0:
+        rand_list = [random.randint(0, 1024) for _ in range(n_dim)]
+    else:
+        rand_list = None
+
+    rand_list = await mpc.transfer(rand_list, senders=0)
     sorted_rand_list = rand_list.copy()
     sorted_rand_list.sort()
     sec_rand_list = [sectype(r) for r in rand_list]
@@ -362,7 +367,6 @@ async def benchmark_sort(n_dim):
 
     start = datetime.now()
     for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Parellel quick sort"):
-        print(rand_list)
         sorted_sec_list = await parallel_quicksort(sec_rand_list, sectype)
         assert await mpc.output(sorted_sec_list) == sorted_rand_list
     end = datetime.now()
@@ -441,7 +445,7 @@ async def main():
     # await investigation()
     # await overflow()
     # await benchmark_bsgn()
-    await benchmark_sort(10)
+    await benchmark_sort(100)
     # await benchmark_vectorized_comp(1000)
     await mpc.shutdown()
 

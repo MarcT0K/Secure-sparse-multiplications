@@ -4,6 +4,8 @@ DOI: 10.1007/978-3-642-37682-5_15
 """
 
 from mpyc.runtime import mpc
+import datetime
+import random
 
 
 async def quicksort(sec_list, sectype, rec_call=False, key=None):
@@ -40,16 +42,23 @@ async def partition(sec_list, key=None):
 async def parallel_quicksort(sec_list, sectype, key=None):
     """Parallel implementation of the oblivious quicksort."""
 
+    start = datetime.datetime.now()
     res = sec_list.copy()
     if len(res) == 1:
         return res
 
+    start_shuffle = datetime.datetime.now()
     mpc.random.shuffle(sectype, res)
+    total_shuffle = datetime.datetime.now() - start_shuffle
 
     key_func = lambda x: x if key is None else key
     pivots = [-1, len(res)]
 
+    total_comp = start - start
+    count = 0
     while len(pivots) - 2 != len(res):
+        count += 1
+        print(len(pivots))
         end_of_partitions = [
             pivots[ind + 1] - 1
             for ind in range(len(pivots) - 1)
@@ -65,7 +74,11 @@ async def parallel_quicksort(sec_list, sectype, key=None):
                 if i not in pivots and i not in end_of_partitions
             ]
         )
-        sec_comp = mpc.np_sgn(end_of_partitions_vect - val_vect) > 0
+        start_comp = datetime.datetime.now()
+        sec_comp = end_of_partitions_vect >= val_vect
+        await mpc.barrier()
+        end_comp = datetime.datetime.now()
+        total_comp += end_comp - start_comp
         plaintext_comp = await mpc.output(sec_comp)
 
         i = -1
@@ -85,19 +98,34 @@ async def parallel_quicksort(sec_list, sectype, key=None):
                     res[i], res[j] = res[j], res[i]
 
         pivots.sort()
-        for i in range(len(pivots) - 1):  # To remove paritions of size 1
+        i = 0
+        while i < len(pivots) - 1:  # To remove paritions of size 1
             if pivots[i + 1] - pivots[i] == 2:
                 pivots = pivots[: i + 1] + [pivots[i] + 1] + pivots[i + 1 :]
-
+            i += 1
+    end = datetime.datetime.now()
+    print(f"Comparison time: {total_comp.total_seconds()}s")
+    print(f"Shuffle time: {total_shuffle.total_seconds()}s")
+    print(f"Total: {(end - start).total_seconds()}s")
+    print("Number of rounds: ", count)
     return res
 
 
 async def test():
+    await mpc.start()
     sectype = mpc.SecInt(64)
-    l = [sectype(i) for i in [0, -3, 7, -12, 2, 6]]
+    if mpc.pid == 0:
+        rand_list = [random.randint(0, 1024) for _ in range(1000)]
+    else:
+        rand_list = []
+
+    rand_list = await mpc.transfer(rand_list, senders=0)
+
+    l = [sectype(i) for i in rand_list]
     print("Initial:", await mpc.output(l))
     l_p = await parallel_quicksort(l, sectype)
     print("Resultat", await mpc.output(l_p))
+    await mpc.shutdown()
 
 
 if __name__ == "__main__":
