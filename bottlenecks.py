@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 import random
 import gmpy2
-from quicksort import quicksort, parallel_quicksort
+from quicksort import quicksort, parallel_quicksort, parallel_quicksort_with_np_shuffle
 import tqdm
 
 
@@ -380,7 +380,28 @@ async def benchmark_sort(n_dim):
     end = datetime.now()
     delta = end - start
     print("Average parallel quicksort sort runtime:\t", delta.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Parellel quick sort"):
+        sorted_sec_list = await parallel_quicksort_with_np_shuffle(
+            sec_rand_list, sectype
+        )
+        assert await mpc.output(sorted_sec_list) == sorted_rand_list
+    end = datetime.now()
+    delta = end - start
+    print(
+        "Average parallel quicksort with np shuffle sort runtime:\t",
+        delta.total_seconds() / NB_REP,
+    )
     print("===END")
+
+
+# Example output with M=3
+# n=1K, l=64
+# Batcher sort runtime: 223.110404
+# Numpy-based batcher sort runtime: 50.744849
+# Parallel quicksort: 114.586813
+# Parallel quicksort with np shuffle sort runtime: 54.285605
 
 
 async def benchmark_vectorized_comp(n_dim):

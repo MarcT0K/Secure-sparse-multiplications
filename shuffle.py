@@ -100,7 +100,7 @@ async def np_shuffle(sectype, x):
             # print("x ", await mpc.output(x))
             # print("===")
             # input()
-        return x
+        return mpc.np_tolist(x)
 
     # elements of x are lists of numbers
     m = len(x[0])
@@ -119,7 +119,7 @@ async def np_shuffle(sectype, x):
         d = mpc.np_outer(u, (x[i] - x_u))
         mpc.np_update(x, i, x_u)
         x = mpc.np_vstack((x[:i, ...], mpc.np_add(x[i:, ...], d)))
-    return x
+    return mpc.np_tolist(x)
 
 
 async def test():
@@ -150,4 +150,5 @@ async def test():
     await mpc.shutdown()
 
 
-mpc.run(test())
+if __name__ == "__main__":
+    mpc.run(test())
