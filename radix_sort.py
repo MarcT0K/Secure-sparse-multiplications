@@ -106,6 +106,7 @@ async def main():
 
 
 # TODO: We should now improve the shuffle because it is the main bottleneck for the radix sort
+# TODO: implement the radix sort of Bogdanov et al.
 
 if __name__ == "__main__":
     mpc.run(main())

@@ -41,20 +41,16 @@ async def partition(sec_list, key=None):
     return p, res
 
 
-async def parallel_quicksort(sec_list, sectype, key=None):
+async def parallel_quicksort(sec_arr, sectype, key=None):
     """Parallel implementation of the oblivious quicksort."""
-
-    start = datetime.datetime.now()
-    res = sec_list.copy()
-    if len(res) == 1:
+    res = mpc.np_copy(sec_arr)
+    n, m = res.shape
+    if n == 1:
         return res
 
-    start_shuffle = datetime.datetime.now()
-    mpc.random.shuffle(sectype, res)
-    await mpc.barrier()
-    total_shuffle = datetime.datetime.now() - start_shuffle
+    res = mpc.np_tolist(await np_shuffle(sectype, res))
 
-    key_func = lambda x: x if key is None else key
+    key_func = (lambda x: x) if key is None else key
     pivots = [-1, len(res)]
 
     while len(pivots) - 2 != len(res):
@@ -98,89 +94,28 @@ async def parallel_quicksort(sec_list, sectype, key=None):
             if pivots[i + 1] - pivots[i] == 2:
                 pivots = pivots[: i + 1] + [pivots[i] + 1] + pivots[i + 1 :]
             i += 1
-    end = datetime.datetime.now()
-    print(f"Shuffle time: {total_shuffle.total_seconds()}s")
-    print(f"Total: {(end - start).total_seconds()}s")
-    return res
-
-
-async def parallel_quicksort_with_np_shuffle(sec_list, sectype, key=None):
-    """Parallel implementation of the oblivious quicksort."""
-
-    start = datetime.datetime.now()
-    res = sec_list.copy()
-    if len(res) == 1:
-        return res
-
-    start_shuffle = datetime.datetime.now()
-    res = await np_shuffle(sectype, res)
-    await mpc.barrier()
-    total_shuffle = datetime.datetime.now() - start_shuffle
-
-    key_func = lambda x: x if key is None else key
-    pivots = [-1, len(res)]
-
-    while len(pivots) - 2 != len(res):
-        end_of_partitions = [
-            pivots[ind + 1] - 1
-            for ind in range(len(pivots) - 1)
-            for _i in range(pivots[ind] + 1, pivots[ind + 1] - 1)
-        ]
-        end_of_partitions_vect = mpc.np_fromlist(
-            [key_func(res[p]) for p in end_of_partitions]
-        )
-        val_vect = mpc.np_fromlist(
-            [
-                key_func(res[i])
-                for i in range(len(res))
-                if i not in pivots and i not in end_of_partitions
-            ]
-        )
-        sec_comp = end_of_partitions_vect >= val_vect
-        plaintext_comp = await mpc.output(sec_comp)
-
-        i = -1
-        pivot_count = 0
-        for j in range(len(res)):
-            if j in pivots:
-                pivot_count += 1
-                i = j
-            elif j in end_of_partitions:
-                p = i + 1
-                pivot_count += 1
-                res[p], res[j] = res[j], res[p]
-                pivots.append(p)
-            else:
-                if plaintext_comp[j - pivot_count]:
-                    i += 1
-                    res[i], res[j] = res[j], res[i]
-
-        pivots.sort()
-        i = 0
-        while i < len(pivots) - 1:  # To remove paritions of size 1
-            if pivots[i + 1] - pivots[i] == 2:
-                pivots = pivots[: i + 1] + [pivots[i] + 1] + pivots[i + 1 :]
-            i += 1
-    end = datetime.datetime.now()
-    print(f"Shuffle time: {total_shuffle.total_seconds()}s")
-    print(f"Total: {(end - start).total_seconds()}s")
-    return res
+    temp = []
+    for tup in res:
+        temp += tup
+    return mpc.np_reshape(mpc.np_fromlist(temp), (n, m))
 
 
 async def test():
     await mpc.start()
     sectype = mpc.SecInt(32)
     if mpc.pid == 0:
-        rand_list = [random.randint(0, 1024) for _ in range(1000)]
+        rand_list = [random.randint(0, 1024) for _ in range(10)]
     else:
         rand_list = []
 
     rand_list = await mpc.transfer(rand_list, senders=0)
 
-    l = [sectype(i) for i in rand_list]
-    # print("Initial:", await mpc.output(l))
-    l_p = await parallel_quicksort_with_np_shuffle(l, sectype)
-    # print("Resultat", await mpc.output(l_p))
+    l = mpc.np_reshape(
+        mpc.np_fromlist([sectype(i) for i in rand_list]), (len(rand_list) // 2, 2)
+    )
+    print("Initial:", await mpc.output(l))
+    l_p = await parallel_quicksort(l, sectype, key=lambda tup: tup[0])
+    print("Resultat", await mpc.output(l_p))
     await mpc.shutdown()
 
 

@@ -5,8 +5,8 @@ import numpy as np
 from datetime import datetime
 import random
 import gmpy2
-from quicksort import quicksort, parallel_quicksort, parallel_quicksort_with_np_shuffle
 import tqdm
+from quicksort import quicksort, parallel_quicksort
 
 
 class SortableTuple:
@@ -381,18 +381,6 @@ async def benchmark_sort(n_dim):
     delta = end - start
     print("Average parallel quicksort sort runtime:\t", delta.total_seconds() / NB_REP)
 
-    start = datetime.now()
-    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Parellel quick sort"):
-        sorted_sec_list = await parallel_quicksort_with_np_shuffle(
-            sec_rand_list, sectype
-        )
-        assert await mpc.output(sorted_sec_list) == sorted_rand_list
-    end = datetime.now()
-    delta = end - start
-    print(
-        "Average parallel quicksort with np shuffle sort runtime:\t",
-        delta.total_seconds() / NB_REP,
-    )
     print("===END")
 
 

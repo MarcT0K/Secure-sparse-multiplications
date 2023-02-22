@@ -76,67 +76,40 @@ async def np_shuffle(sectype, x):
     Given list x may contain public or secret elements.
     Elements of x are all numbers or all lists (of the same length) of numbers.
     """
-    n = len(x)
-    # assume same type for all elts of x
-    x_i_is_list = isinstance(x[0], list)
-    if not x_i_is_list:
-        # elements of x are numbers
-        if not isinstance(x[0], sectype):
-            for i in range(n):
-                x[i] = sectype(x[i])
-        x = mpc.np_fromlist(x)
-
-        for i in range(n - 1):
-            # print("x", await mpc.output(x))
-            u = await np_random_unit_vector(sectype, n - i)
-            # print("u", await mpc.output(u))
-            x_u = mpc.np_matmul(x[i:], u)
-            # print("x_u", await mpc.output(x_u))
-            d = (x[i] - x_u) * u
-            # print("d", await mpc.output(d))
-            mpc.np_update(x, i, x_u)
-            # print("x", await mpc.output(x))
-            x = mpc.np_hstack((x[:i], mpc.np_add(x[i:], d)))
-            # print("x ", await mpc.output(x))
-            # print("===")
-            # input()
-        return mpc.np_tolist(x)
-
-    # elements of x are lists of numbers
-    m = len(x[0])
-    temp = []
-    for i in range(n):
-        for j in range(m):
-            if not isinstance(x[i][j], sectype):
-                temp.append(sectype(x[i][j]))
-            else:
-                temp.append(x[i][j])
-    x = mpc.np_reshape(mpc.np_fromlist(temp), (n, m))
+    n = x.shape[0]
 
     for i in range(n - 1):
         u = mpc.np_transpose(await np_random_unit_vector(sectype, n - i))
-        x_u = u @ x[i:]
-        d = mpc.np_outer(u, (x[i] - x_u))
+        x_u = mpc.np_matmul(u, x[i:])
+        if len(x.shape) > 1:
+            d = mpc.np_outer(u, (x[i] - x_u))
+            x = mpc.np_vstack((x[:i, ...], mpc.np_add(x[i:, ...], d)))
+        else:
+            d = u * (x[i] - x_u)
+            x = mpc.np_hstack((x[:i, ...], mpc.np_add(x[i:, ...], d)))
         mpc.np_update(x, i, x_u)
-        x = mpc.np_vstack((x[:i, ...], mpc.np_add(x[i:, ...], d)))
-    return mpc.np_tolist(x)
+
+    return x
 
 
 async def test():
     await mpc.start()
     sectype = mpc.SecInt(64)
-
     if mpc.pid == 0:
-        l = [[sectype(i), sectype(random.randint(0, 1024))] for i in range(1000)]
+        l = [[sectype(i), sectype(random.randint(0, 1024))] for i in range(10)]
     else:
         l = None
     l = await mpc.transfer(l, senders=0)
+    l_arr = []
+    for tup in l:
+        l_arr += tup
+    l_arr = mpc.np_reshape(mpc.np_fromlist(l_arr), (len(l), len(l[0])))
 
+    print(await mpc.output(l_arr))
     start = datetime.datetime.now()
-    x = await np_shuffle(sectype, l)
+    x = await np_shuffle(sectype, l_arr)
     print(await mpc.output(x))
     delta_np = datetime.datetime.now() - start
-    print("np shuffle: ", delta_np.total_seconds())
 
     start = datetime.datetime.now()
     shuffle(sectype, l)
