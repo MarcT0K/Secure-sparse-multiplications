@@ -103,17 +103,23 @@ async def np_shuffle(sectype, x):
         return x
 
     # elements of x are lists of numbers
-    # TODO: transform the list shuffle using np endpoints
-    for j in range(len(x[0])):
-        if not isinstance(x[0][j], sectype):
-            for i in range(n):
-                x[i][j] = sectype(x[i][j])
+    m = len(x[0])
+    temp = []
+    for i in range(n):
+        for j in range(m):
+            if not isinstance(x[i][j], sectype):
+                temp.append(sectype(x[i][j]))
+            else:
+                temp.append(x[i][j])
+    x = mpc.np_reshape(mpc.np_fromlist(temp), (n, m))
+
     for i in range(n - 1):
-        u = random_unit_vector(sectype, n - i)
-        x_u = mpc.matrix_prod([u], x[i:])[0]
-        d = mpc.matrix_prod([[a] for a in u], [mpc.vector_sub(x[i], x_u)])
-        x[i] = x_u
-        x[i:] = mpc.matrix_add(x[i:], d)
+        u = mpc.np_transpose(await np_random_unit_vector(sectype, n - i))
+        x_u = u @ x[i:]
+        d = mpc.np_outer(u, (x[i] - x_u))
+        mpc.np_update(x, i, x_u)
+        x = mpc.np_vstack((x[:i, ...], mpc.np_add(x[i:, ...], d)))
+    return x
 
 
 async def test():
@@ -121,7 +127,7 @@ async def test():
     sectype = mpc.SecInt(64)
 
     if mpc.pid == 0:
-        l = [sectype(random.randint(0, 1024)) for i in range(1000)]
+        l = [[sectype(i), sectype(random.randint(0, 1024))] for i in range(1000)]
     else:
         l = None
     l = await mpc.transfer(l, senders=0)
@@ -130,10 +136,14 @@ async def test():
     x = await np_shuffle(sectype, l)
     print(await mpc.output(x))
     delta_np = datetime.datetime.now() - start
+    print("np shuffle: ", delta_np.total_seconds())
 
     start = datetime.datetime.now()
     shuffle(sectype, l)
-    print(await mpc.output(l))
+    print("[")
+    for i in range(len(l)):
+        print(await mpc.output(l[i]), end=", ")
+    print("]")
     delta = datetime.datetime.now() - start
     print("np shuffle: ", delta_np.total_seconds())
     print("shuffle: ", delta.total_seconds())
