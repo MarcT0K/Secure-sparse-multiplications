@@ -348,7 +348,7 @@ async def benchmark_sort(n_dim):
     sorted_rand_list.sort()
     sec_rand_list = [sectype(r) for r in rand_list]
 
-    NB_REP = 10
+    NB_REP = 1
     start = datetime.now()
     for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Batcher sort"):
         sorted_sec_list = mpc.sorted(sec_rand_list)
@@ -356,6 +356,14 @@ async def benchmark_sort(n_dim):
     end = datetime.now()
     delta = end - start
     print("Average batcher sort runtime:\t", delta.total_seconds() / NB_REP)
+
+    start = datetime.now()
+    for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Batcher sort"):
+        sorted_sec_list = mpc.np_sort(mpc.np_fromlist(sec_rand_list))
+        assert await mpc.output(mpc.np_tolist(sorted_sec_list)) == sorted_rand_list
+    end = datetime.now()
+    delta = end - start
+    print("Average numpy-based batcher sort runtime:\t", delta.total_seconds() / NB_REP)
 
     start = datetime.now()
     for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Quick sort"):
@@ -445,7 +453,7 @@ async def main():
     # await investigation()
     # await overflow()
     # await benchmark_bsgn()
-    await benchmark_sort(100)
+    await benchmark_sort(1000)
     # await benchmark_vectorized_comp(1000)
     await mpc.shutdown()
 
