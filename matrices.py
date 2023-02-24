@@ -8,6 +8,8 @@ from mpyc.runtime import mpc
 from sortable_tuple import SortableTuple
 from shuffle import np_shuffle
 
+import datetime
+
 SparseMatrixListType = List[List[int]]
 ScipySparseMatType = scipy.sparse._coo.coo_matrix
 
@@ -220,7 +222,11 @@ class SparseMatrixColumnNumpy(SecureMatrix):
             sorting_keys = res[:, 0] * (other.shape[1] + 1) + res[:, 1]
             res = mpc.np_column_stack((mpc.np_transpose(sorting_keys), res))
 
+            start = datetime.datetime.now()
             res = mpc.np_sort(res, axis=0, key=lambda tup: tup[0])
+            await mpc.barrier()
+            delta = datetime.datetime.now() - start
+            print("Sorting time: ", delta.total_seconds())
 
             comp = res[0 : res.shape[0] - 1, 0] == res[1 : res.shape[0], 0]
             col_val = [res[0, 3]]
@@ -238,7 +244,12 @@ class SparseMatrixColumnNumpy(SecureMatrix):
             mpc.np_update(res, (range(len(col_i)), 1), mpc.np_fromlist(col_i))
 
             res = res[:, 1:]  # We remove the sorting key
+            start = datetime.datetime.now()
+            print(res.shape)
             res = await np_shuffle(self.sectype, res)
+            await mpc.barrier()
+            delta = datetime.datetime.now() - start
+            print("Shuffling time: ", delta.total_seconds())
 
             final_res = []
             zero_test = await mpc.np_is_zero_public(

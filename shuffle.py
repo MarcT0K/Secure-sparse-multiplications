@@ -96,7 +96,7 @@ async def test():
     await mpc.start()
     sectype = mpc.SecInt(64)
     if mpc.pid == 0:
-        l = [[sectype(i), sectype(random.randint(0, 1024))] for i in range(10)]
+        l = [[sectype(i), sectype(random.randint(0, 1024))] for i in range(10000)]
     else:
         l = None
     l = await mpc.transfer(l, senders=0)
