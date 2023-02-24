@@ -1,6 +1,7 @@
 from mpyc.runtime import mpc
+
+from quicksort import parallel_quicksort, quicksort
 from sortable_tuple import SortableTuple
-from quicksort import quicksort, parallel_quicksort
 
 
 def sparse_vector_dot(vect1, vect2):

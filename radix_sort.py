@@ -3,11 +3,11 @@
 URL: https://eprint.iacr.org/2014/121
 """
 
-from mpyc.runtime import mpc
-from mpyc.random import shuffle
-
-import random
 import math
+import random
+
+from mpyc.random import shuffle
+from mpyc.runtime import mpc
 
 
 async def bin_vec_to_B(bin_vect):

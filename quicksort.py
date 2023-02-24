@@ -3,9 +3,10 @@
 DOI: 10.1007/978-3-642-37682-5_15
 """
 
-from mpyc.runtime import mpc
 import datetime
 import random
+
+from mpyc.runtime import mpc
 
 from shuffle import np_shuffle
 

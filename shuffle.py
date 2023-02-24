@@ -1,8 +1,8 @@
-from mpyc.runtime import mpc
-from mpyc.random import random_unit_vector, shuffle
-
-import random
 import datetime
+import random
+
+from mpyc.random import random_unit_vector, shuffle
+from mpyc.runtime import mpc
 
 
 async def random_unit_vector_custom(sectype, n):

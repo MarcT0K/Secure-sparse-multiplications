@@ -1,12 +1,14 @@
-from mpyc.runtime import mpc
-import mpyc.numpy as sec_np
-import scipy.sparse
-import numpy as np
-from datetime import datetime
 import random
+from datetime import datetime
+
 import gmpy2
+import mpyc.numpy as sec_np
+import numpy as np
+import scipy.sparse
 import tqdm
-from quicksort import quicksort, parallel_quicksort
+from mpyc.runtime import mpc
+
+from quicksort import parallel_quicksort, quicksort
 
 
 class SortableTuple:
