@@ -298,16 +298,42 @@ class DenseMatrix(SecureMatrix):
             self.shape = (len(mat), len(mat[0]))
         else:
             self.shape = mat.shape
-            temp_mat = np.vectorize(lambda x: self.sectype(int(x)))(
-                mat
-            )  # TODO: find a way to avoid the hardcoded type
-            self._mat = temp_mat.tolist()
+            self._mat = [[sectype(i) for i in row] for row in mat.tolist()]
 
     def dot(self, other):
         if not isinstance(other, DenseMatrix):
             raise ValueError("Can only multiply dense with dense")
 
         return DenseMatrix(mpc.matrix_prod(self._mat, other._mat), sectype=self.sectype)
+
+    async def print(self):
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                print(await mpc.output(self._mat[i][j]), end=" ")
+            print("")
+
+    def get(self, i, j):
+        return self._mat[i][j]
+
+
+class DenseMatrixNumpy(SecureMatrix):
+    def __init__(self, mat, sectype=None):
+        super().__init__(sectype)
+        if isinstance(mat, mpc.SecureArray):
+            self._mat = mat
+            self.shape = (len(mat), len(mat[0]))
+        else:
+            self.shape = mat.shape
+            temp_mat = [sectype(i) for i in mat.flatten().tolist()[0]]
+            self._mat = mpc.np_reshape(mpc.np_fromlist(temp_mat), self.shape)
+
+    def dot(self, other):
+        if not isinstance(other, DenseMatrixNumpy):
+            raise ValueError("Can only multiply dense with dense")
+
+        return DenseMatrixNumpy(
+            mpc.np_matmul(self._mat, other._mat), sectype=self.sectype
+        )
 
     async def print(self):
         for i in range(self.shape[0]):
