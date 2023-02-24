@@ -165,17 +165,18 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, sparsity=0.0
         x_sparse = None
 
     x_sparse = await mpc.transfer(x_sparse, senders=0)
-
     dense_mat = x_sparse.todense().astype(int)
-    sec_dense_t = DenseMatrix(dense_mat.transpose(), sectype=secint)
-    sec_dense = DenseMatrix(dense_mat, sectype=secint)
 
-    start = datetime.now()
-    z = sec_dense_t.dot(sec_dense)
-    await mpc.output(z.get(0, 0))
-    end = datetime.now()
-    delta_dense = end - start
-    print("Time for dense:", delta_dense.total_seconds())
+    # sec_dense_t = DenseMatrix(dense_mat.transpose(), sectype=secint)
+    # sec_dense = DenseMatrix(dense_mat, sectype=secint)
+
+    # start = datetime.now()
+    # z = sec_dense_t.dot(sec_dense)
+    # await mpc.output(z.get(0, 0))
+    # await mpc.barrier()
+    # end = datetime.now()
+    # delta_dense = end - start
+    # print("Time for dense:", delta_dense.total_seconds())
 
     # sec_dense_t = DenseMatrixNaive(dense_mat.transpose(), sectype=secint)
     # sec_dense = DenseMatrixNaive(dense_mat, sectype=secint)
@@ -192,32 +193,34 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, sparsity=0.0
     start = datetime.now()
     z = sec_dense_t.dot(sec_dense)
     await mpc.output(z.get(0, 0))
+    await mpc.barrier()
     end = datetime.now()
     delta_dense = end - start
     print("Time for dense with numpy optimization:", delta_dense.total_seconds())
-
-    sec_x = SparseMatrixColumn(x_sparse.transpose(), secint)
-    sec_y = SparseMatrixRow(x_sparse, secint)
-
-    start = datetime.now()
-    z = await sec_x.dot(sec_y)
-    # await z.print()
-    end = datetime.now()
-    delta_sparse = end - start
-    print("Time for sparse with batcher sort:", delta_sparse.total_seconds())
 
     sec_x = SparseMatrixColumnNumpy(x_sparse.transpose(), secint)
     sec_y = SparseMatrixRowNumpy(x_sparse, secint)
 
     start = datetime.now()
     z = await sec_x.dot(sec_y)
-    # await z.print()
+    await mpc.barrier()
     end = datetime.now()
     delta_sparse = end - start
     print(
         "Time for sparse with numpy-optimized batcher sort:",
         delta_sparse.total_seconds(),
     )
+
+    # sec_x = SparseMatrixColumn(x_sparse.transpose(), secint)
+    # sec_y = SparseMatrixRow(x_sparse, secint)
+
+    # start = datetime.now()
+    # z = await sec_x.dot(sec_y)
+    # await mpc.barrier()
+    # end = datetime.now()
+    # delta_sparse = end - start
+    # print("Time for sparse with batcher sort:", delta_sparse.total_seconds())
+
     print("=== END")
 
 
@@ -225,8 +228,10 @@ async def main():
     await mpc.start()
     # await benchmark_dot_product()
     await benchmark_sparse_sparse_mat_mult(m_dim=100)
+    await benchmark_sparse_sparse_mat_mult(m_dim=500)
     await benchmark_sparse_sparse_mat_mult(m_dim=1000)
-    # await benchmark_sparse_sparse_mat_mult(m_dim=10000)
+    await benchmark_sparse_sparse_mat_mult(m_dim=5000)
+    await benchmark_sparse_sparse_mat_mult(m_dim=10000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=100000)
     await mpc.shutdown()
 
