@@ -4,8 +4,16 @@ import numpy as np
 import scipy.sparse
 from mpyc.runtime import mpc
 
-from matrices import DenseMatrix, SparseMatrixColumn, SparseMatrixRow
+from matrices import (
+    DenseMatrix,
+    SparseMatrixColumn,
+    SparseMatrixRow,
+    SparseMatrixRowNumpy,
+    SparseMatrixColumnNumpy,
+)
+
 from vectors import (
+    DenseVector,
     SparseVector,
     SparseVectorNaive,
     SparseVectorNaiveOpti,
@@ -95,23 +103,23 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
     # delta_sparse = end - start
     # print("Time for sparse naive opti:", delta_sparse.total_seconds())
 
-    # sec_x = SparseVectorNaivePSI(x_sparse, secint)
-    # sec_y = SparseVectorNaivePSI(y_sparse, secint)
-    # start = datetime.now()
-    # z = await sec_x.dot(sec_y)
-    # assert await mpc.output(z) == real_res
-    # end = datetime.now()
-    # delta_sparse = end - start
-    # print("Time for sparse psi:", delta_sparse.total_seconds())
+    sec_x = SparseVectorNaivePSI(x_sparse, secint)
+    sec_y = SparseVectorNaivePSI(y_sparse, secint)
+    start = datetime.now()
+    z = await sec_x.dot(sec_y)
+    assert await mpc.output(z) == real_res
+    end = datetime.now()
+    delta_sparse = end - start
+    print("Time for sparse psi:", delta_sparse.total_seconds())
 
-    # sec_x = SparseVectorNaivePSIOpti(x_sparse, secint)
-    # sec_y = SparseVectorNaivePSIOpti(y_sparse, secint)
-    # start = datetime.now()
-    # z = await sec_x.dot(sec_y)
-    # assert await mpc.output(z) == real_res
-    # end = datetime.now()
-    # delta_sparse = end - start
-    # print("Time for sparse psi optimized:", delta_sparse.total_seconds())
+    sec_x = SparseVectorNaivePSIOpti(x_sparse, secint)
+    sec_y = SparseVectorNaivePSIOpti(y_sparse, secint)
+    start = datetime.now()
+    z = await sec_x.dot(sec_y)
+    assert await mpc.output(z) == real_res
+    end = datetime.now()
+    delta_sparse = end - start
+    print("Time for sparse psi optimized:", delta_sparse.total_seconds())
 
     # sec_x = SparseVectorORAM(x_sparse, secint)
     # sec_y = SparseVectorORAM(y_sparse, secint)
@@ -122,14 +130,14 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
     # delta_sparse = end - start
     # print("Time for sparse ORAM:", delta_sparse.total_seconds())
 
-    # sec_x = SparseVectorQuicksort(x_sparse, secint)
-    # sec_y = SparseVectorQuicksort(y_sparse, secint)
-    # start = datetime.now()
-    # z = await sec_x.dot(sec_y)
-    # assert await mpc.output(z) == real_res
-    # end = datetime.now()
-    # delta_sparse = end - start
-    # print("Time for sparse quicksort:", delta_sparse.total_seconds())
+    sec_x = SparseVectorQuicksort(x_sparse, secint)
+    sec_y = SparseVectorQuicksort(y_sparse, secint)
+    start = datetime.now()
+    z = await sec_x.dot(sec_y)
+    assert await mpc.output(z) == real_res
+    end = datetime.now()
+    delta_sparse = end - start
+    print("Time for sparse quicksort:", delta_sparse.total_seconds())
 
     sec_x = SparseVectorParallelQuicksort(x_sparse, secint)
     sec_y = SparseVectorParallelQuicksort(y_sparse, secint)
@@ -181,25 +189,31 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, sparsity=0.0
 
     start = datetime.now()
     z = await sec_x.dot(sec_y)
+    # await z.print()
     end = datetime.now()
     delta_sparse = end - start
     print("Time for sparse with batcher sort:", delta_sparse.total_seconds())
 
-    sec_x = SparseMatrixColumn(x_sparse.transpose(), secint, quicksort)
-    sec_y = SparseMatrixRow(x_sparse, secint)
+    sec_x = SparseMatrixColumnNumpy(x_sparse.transpose(), secint)
+    sec_y = SparseMatrixRowNumpy(x_sparse, secint)
 
     start = datetime.now()
     z = await sec_x.dot(sec_y)
+    # await z.print()
     end = datetime.now()
     delta_sparse = end - start
-    print("Time for sparse with quick sort:", delta_sparse.total_seconds())
+    print(
+        "Time for sparse with numpy-optimized batcher sort:",
+        delta_sparse.total_seconds(),
+    )
     print("=== END")
 
 
 async def main():
     await mpc.start()
-    await benchmark_dot_product()
-    # await benchmark_sparse_sparse_mat_mult(m_dim=1000)
+    # await benchmark_dot_product()
+    # await benchmark_sparse_sparse_mat_mult(m_dim=100)
+    await benchmark_sparse_sparse_mat_mult(m_dim=1000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=10000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=100000)
     await mpc.shutdown()

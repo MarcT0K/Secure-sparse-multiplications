@@ -169,22 +169,21 @@ class SparseMatrixColumn(SecureMatrix):
 
 
 class SparseMatrixColumnNumpy(SecureMatrix):
-    def __init__(
-        self, sparse_mat: ScipySparseMatType, sectype=None, sort_coroutine=None
-    ):
+    def __init__(self, sparse_mat: ScipySparseMatType, sectype=None):
         super().__init__(sectype)
 
-        self.sort_coroutine = (
-            SparseMatrixColumn.default_sort
-            if sort_coroutine is None
-            else sort_coroutine
-        )
         self.shape = sparse_mat.shape
         to_sec_int = lambda x: self.sectype(int(x))
         self._mat = [[] for i in range(sparse_mat.shape[1])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            self._mat[j] + [to_sec_int(i), to_sec_int(v)]
-        self._mat = [mpc.np_fromlist(col) for col in self._mat]
+            self._mat[j] += [to_sec_int(i), to_sec_int(v)]
+
+        self._mat = [
+            mpc.np_reshape(mpc.np_fromlist(self._mat[k]), (len(self._mat[k]) // 2, 2))
+            if len(self._mat[k])
+            else None
+            for k in range(len(self._mat))
+        ]
 
     async def dot(self, other) -> SparseMatrixCOO:
         if self.shape[1] != other.shape[0]:
@@ -196,18 +195,21 @@ class SparseMatrixColumnNumpy(SecureMatrix):
             res = None
 
             for k in range(self.shape[1]):
+                if self._mat[k] is None or other._mat[k] is None:
+                    continue
+
                 i_vect = []
                 j_vect = []
                 for i in range(self._mat[k].shape[0]):
                     curr_i = self._mat[k][i, 0]
                     for j in range(other._mat[k].shape[0]):
                         i_vect.append(curr_i)
-                        j_vect.append(other._mat[k][j, 1])
+                        j_vect.append(other._mat[k][j, 0])
 
                 i_vect = mpc.np_fromlist(i_vect)
-                i_vect = mpc.np_fromlist(i_vect)
+                j_vect = mpc.np_fromlist(j_vect)
                 mult_res_k = mpc.np_flatten(
-                    mpc.np_outer(self._mat[k][:, 2], other._mat[k][:, 2])
+                    mpc.np_outer(self._mat[k][:, 1], other._mat[k][:, 1])
                 )
                 res_k = mpc.np_transpose(mpc.np_vstack((i_vect, j_vect, mult_res_k)))
                 if res is None:
@@ -216,17 +218,24 @@ class SparseMatrixColumnNumpy(SecureMatrix):
                     res = mpc.np_vstack((res, res_k))
 
             sorting_keys = res[:, 0] * (other.shape[1] + 1) + res[:, 1]
-            res = mpc.np_hstack((sorting_keys, res))
+            res = mpc.np_column_stack((mpc.np_transpose(sorting_keys), res))
 
             res = mpc.np_sort(res, axis=0, key=lambda tup: tup[0])
 
             comp = res[0 : res.shape[0] - 1, 0] == res[1 : res.shape[0], 0]
+            col_val = [res[0, 3]]
+            col_i = []
             for i in range(res.shape[0] - 1):
-                res[i + 1, 3] = mpc.if_else(
-                    comp[i], res[i, 3] + res[i + 1, 3], res[i + 1, 3]
+                col_val.append(
+                    mpc.if_else(comp[i], res[i, 3] + res[i + 1, 3], res[i + 1, 3])
                 )
-                res[i, 1] = mpc.if_else(comp[i], -1, res[i, 1])
+                col_i.append(mpc.if_else(comp[i], -1, res[i, 1]))
                 # Only need one placeholder per tuple to make it invalid
+            col_i.append(res[-1, 1])
+
+            # I do a unique update because I had issue with iterative updates.
+            mpc.np_update(res, (range(len(col_val)), 3), mpc.np_fromlist(col_val))
+            mpc.np_update(res, (range(len(col_i)), 1), mpc.np_fromlist(col_i))
 
             res = res[:, 1:]  # We remove the sorting key
             res = await np_shuffle(self.sectype, res)
@@ -273,7 +282,12 @@ class SparseMatrixRowNumpy(SecureMatrix):
         self._mat = [[] for i in range(sparse_mat.shape[0])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
             self._mat[i] += [to_sec_int(j), to_sec_int(v)]
-        self._mat = [mpc.np_fromlist(row) for row in self._mat]
+        self._mat = [
+            mpc.np_reshape(mpc.np_fromlist(self._mat[k]), (len(self._mat[k]) // 2, 2))
+            if len(self._mat[k])
+            else None
+            for k in range(len(self._mat))
+        ]
 
 
 class DenseMatrix(SecureMatrix):
