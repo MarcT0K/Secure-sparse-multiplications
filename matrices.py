@@ -1,10 +1,12 @@
 from abc import abstractmethod
 from typing import List, Optional, Tuple, Union
 
+import numpy as np
 import scipy.sparse
 from mpyc.runtime import mpc
 
 from sortable_tuple import SortableTuple
+from shuffle import np_shuffle
 
 SparseMatrixListType = List[List[int]]
 ScipySparseMatType = scipy.sparse._coo.coo_matrix
@@ -184,45 +186,59 @@ class SparseMatrixColumnNumpy(SecureMatrix):
             self._mat[j] + [to_sec_int(i), to_sec_int(v)]
         self._mat = [mpc.np_fromlist(col) for col in self._mat]
 
-    @staticmethod
-    async def default_sort(unsorted, _sectype, key=None):
-        return mpc.sorted(unsorted, key)
-
     async def dot(self, other) -> SparseMatrixCOO:
         if self.shape[1] != other.shape[0]:
             raise ValueError("Invalid dimensions")
         if self.sectype != other.sectype:
             raise ValueError("Incompatible secure types")
 
-        if isinstance(other, SparseMatrixRow):
-            res = []
+        if isinstance(other, SparseMatrixRowNumpy):
+            res = None
+
             for k in range(self.shape[1]):
-                for left_i, left_value in self._mat[k]:
-                    for right_j, right_value in other._mat[k]:
+                i_vect = []
+                j_vect = []
+                for i in range(self._mat[k].shape[0]):
+                    curr_i = self._mat[k][i, 0]
+                    for j in range(other._mat[k].shape[0]):
+                        i_vect.append(curr_i)
+                        j_vect.append(other._mat[k][j, 1])
 
-                        res.append([left_i, right_j, left_value * right_value])
-
-            res = await self.sort_coroutine(res, self.sectype, key=SortableTuple)
-
-            for i in range(1, len(res)):
-                sec_comp_res = (res[i - 1][0] == res[i][0]) & (
-                    res[i - 1][1] == res[i][1]
+                i_vect = mpc.np_fromlist(i_vect)
+                i_vect = mpc.np_fromlist(i_vect)
+                mult_res_k = mpc.np_flatten(
+                    mpc.np_outer(self._mat[k][:, 2], other._mat[k][:, 2])
                 )
-                res[i][2] = mpc.if_else(
-                    sec_comp_res, res[i - 1][2] + res[i][2], res[i][2]
-                )
+                res_k = mpc.np_transpose(mpc.np_vstack((i_vect, j_vect, mult_res_k)))
+                if res is None:
+                    res = res_k
+                else:
+                    res = mpc.np_vstack((res, res_k))
 
-                res[i - 1][0] = mpc.if_else(sec_comp_res, -1, res[i - 1][0])
+            sorting_keys = res[:, 0] * (other.shape[1] + 1) + res[:, 1]
+            res = mpc.np_hstack((sorting_keys, res))
+
+            res = mpc.np_sort(res, axis=0, key=lambda tup: tup[0])
+
+            comp = res[0 : res.shape[0] - 1, 0] == res[1 : res.shape[0], 0]
+            for i in range(res.shape[0] - 1):
+                res[i + 1, 3] = mpc.if_else(
+                    comp[i], res[i, 3] + res[i + 1, 3], res[i + 1, 3]
+                )
+                res[i, 1] = mpc.if_else(comp[i], -1, res[i, 1])
                 # Only need one placeholder per tuple to make it invalid
 
-            mpc.random.shuffle(self.sectype, res)
+            res = res[:, 1:]  # We remove the sorting key
+            res = await np_shuffle(self.sectype, res)
 
             final_res = []
-            for i in range(len(res)):
-                if await mpc.output(res[i][0] != -1):
-                    final_res.append(res[i])
-                # Here, we leak the number of non-zero elements in the output matrix
+            zero_test = await mpc.np_is_zero_public(
+                res[:, 0] + 1
+            )  # Here, we leak the number of non-zero elements in the output matrix
+            mask = [i for i, test in enumerate(zero_test) if not test]
+            final_res = mpc.np_tolist(res[mask, :])
 
+            # TODO: create a numpy equivalent of this class
             return SparseMatrixCOO(
                 final_res, sectype=self.sectype, shape=(self.shape[0], other.shape[1])
             )
@@ -249,14 +265,15 @@ class SparseMatrixRow(SecureMatrix):
                 print("]")
 
 
-class SparseMatrixRow(SecureMatrix):
+class SparseMatrixRowNumpy(SecureMatrix):
     def __init__(self, sparse_mat: ScipySparseMatType, sectype=None):
         super().__init__(sectype)
         self.shape = sparse_mat.shape
         to_sec_int = lambda x: self.sectype(int(x))
         self._mat = [[] for i in range(sparse_mat.shape[0])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            self._mat[i].append((to_sec_int(j), to_sec_int(v)))
+            self._mat[i] += [to_sec_int(j), to_sec_int(v)]
+        self._mat = [mpc.np_fromlist(row) for row in self._mat]
 
 
 class DenseMatrix(SecureMatrix):
