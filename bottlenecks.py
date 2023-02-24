@@ -377,8 +377,10 @@ async def benchmark_sort(n_dim):
 
     start = datetime.now()
     for _i in tqdm.tqdm(iterable=range(NB_REP), desc="Parellel quick sort"):
-        sorted_sec_list = await parallel_quicksort(sec_rand_list, sectype)
-        assert await mpc.output(sorted_sec_list) == sorted_rand_list
+        sorted_sec_list = await parallel_quicksort(
+            mpc.np_fromlist(sec_rand_list), sectype
+        )
+        assert await mpc.output(mpc.np_tolist(sorted_sec_list)) == sorted_rand_list
     end = datetime.now()
     delta = end - start
     print("Average parallel quicksort sort runtime:\t", delta.total_seconds() / NB_REP)
@@ -464,6 +466,7 @@ async def main():
     # await investigation()
     # await overflow()
     # await benchmark_bsgn()
+    await benchmark_sort(100)
     await benchmark_sort(1000)
     # await benchmark_vectorized_comp(1000)
     await mpc.shutdown()

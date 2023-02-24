@@ -45,8 +45,9 @@ async def partition(sec_list, key=None):
 async def parallel_quicksort(sec_arr, sectype, key=None):
     """Parallel implementation of the oblivious quicksort."""
     res = mpc.np_copy(sec_arr)
-    n, m = res.shape
-    if n == 1:
+    init_shape = res.shape
+
+    if init_shape[0] == 1:
         return res
 
     res = mpc.np_tolist(await np_shuffle(sectype, res))
@@ -96,9 +97,13 @@ async def parallel_quicksort(sec_arr, sectype, key=None):
                 pivots = pivots[: i + 1] + [pivots[i] + 1] + pivots[i + 1 :]
             i += 1
     temp = []
-    for tup in res:
-        temp += tup
-    return mpc.np_reshape(mpc.np_fromlist(temp), (n, m))
+    for el in res:
+        if len(init_shape) == 1:
+            temp.append(el)
+        else:
+            temp += el
+
+    return mpc.np_reshape(mpc.np_fromlist(temp), init_shape)
 
 
 async def test():
