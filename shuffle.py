@@ -1,41 +1,8 @@
 import datetime
 import random
 
-from mpyc.random import random_unit_vector, shuffle
+from mpyc.random import shuffle
 from mpyc.runtime import mpc
-
-
-async def random_unit_vector_custom(sectype, n):
-    """Uniformly random secret rotation of [1] + [0]*(n-1).
-
-    Expected number of secret random bits needed is ceil(log_2 n) + c,
-    with c a small constant, c < 3.
-    """
-
-    if n == 1:
-        return [sectype(1)]
-
-    b = n - 1
-    k = b.bit_length()
-    x = mpc.random_bits(sectype, k)
-    i = k - 1
-    u = [x[i], 1 - x[i]]
-    while i:
-        i -= 1
-        if (b >> i) & 1:
-            v = mpc.scalar_mul(x[i], u)
-            v.extend(mpc.vector_sub(u, v))
-            u = v
-        elif await mpc.output(u[0] * x[i]):  # TODO: mul_public
-            # restart, keeping unused secret random bits x[:i]
-            x[i:] = mpc.random_bits(sectype, k - i)
-            i = k - 1
-            u = [x[i], 1 - x[i]]
-        else:
-            v = mpc.scalar_mul(x[i], u[1:])
-            v.extend(mpc.vector_sub(u[1:], v))
-            u[1:] = v
-    return u
 
 
 async def np_random_unit_vector(sectype, n):
@@ -100,6 +67,7 @@ async def test():
     else:
         l = None
     l = await mpc.transfer(l, senders=0)
+
     l_arr = []
     for tup in l:
         l_arr += tup
