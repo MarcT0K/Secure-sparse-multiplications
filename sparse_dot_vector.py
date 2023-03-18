@@ -16,8 +16,6 @@ def sparse_vector_dot(vect1, vect2):
     return res
 
 
-# Pre-opti time: 7.146547
-# Post-opti time: 5.372963
 def sparse_vector_dot_np(vect1, vect2):
     unsorted = mpc.np_vstack((vect1, vect2))
     sorted_array = mpc.np_sort(unsorted, axis=0, key=lambda tup: tup[0])
@@ -41,9 +39,6 @@ async def sparse_vector_dot_quicksort(vect1, vect2, sectype, key=None):
     return res
 
 
-# Parallel quicksort: 11.859065
-# Parallel quicksort with np_shuffle: 7.07430
-# Parallel quicksort with np_shuffle + optim sum: 5.7
 async def sparse_vector_dot_parallel_quicksort(vect1, vect2, sectype, key=None):
     unsorted = mpc.np_vstack((vect1, vect2))
     n = unsorted.shape[0]
@@ -164,7 +159,3 @@ def sparse_vector_dot_merge(vect1, vect2, sectype, key=None):  # TODO: test
         temp = mpc.if_else(sec_comp, temp, 0)
         res += temp
     return res
-
-
-# IDEE pour sparse-dense mult: en plus du vecteur sparse, l'utilisateur fourni une permutation aléatoire. Le vecteur dense est permuté et les indices sont révélés en clair.
-# => Problème: la permutation doit être plus chere qu'une produit vectoriel
