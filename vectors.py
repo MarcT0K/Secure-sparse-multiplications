@@ -1,4 +1,4 @@
-from matrices import DenseMatrix, SecureMatrix
+from matrices import DenseMatrix, DenseMatrixNumpy, SecureMatrix
 from sparse_dot_vector import *
 
 
@@ -10,6 +10,21 @@ class DenseVector(DenseMatrix):
 
     def dot(self, other):
         if isinstance(other, DenseVector):
+            res = super().dot(other)
+            assert res.shape == (1, 1)
+            return res.get(0, 0)
+        else:
+            raise NotImplementedError
+
+
+class DenseVectorNumpy(DenseMatrixNumpy):
+    def __init__(self, mat, sectype=None):
+        if mat.shape[1] != 1 and mat.shape[0] != 1:
+            raise ValueError("Input must be a vector")
+        super().__init__(mat, sectype)
+
+    def dot(self, other):
+        if isinstance(other, DenseVectorNumpy):
             res = super().dot(other)
             assert res.shape == (1, 1)
             return res.get(0, 0)

@@ -16,6 +16,7 @@ from matrices import (
 
 from vectors import (
     DenseVector,
+    DenseVectorNumpy,
     SparseVector,
     SparseVectorNaive,
     SparseVectorNaiveOpti,
@@ -51,8 +52,17 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
     real_res = dense_x.transpose().dot(dense_y)[0, 0]
     print("Real result:", real_res)
 
-    sec_dense_x = DenseVector(dense_x.transpose(), sectype=secint)
-    sec_dense_y = DenseVector(dense_y, sectype=secint)
+    # sec_dense_x = DenseVector(dense_x.transpose(), sectype=secint)
+    # sec_dense_y = DenseVector(dense_y, sectype=secint)
+    # start = datetime.now()
+    # z = sec_dense_x.dot(sec_dense_y)
+    # assert await mpc.output(z) == real_res
+    # end = datetime.now()
+    # delta_dense = end - start
+    # print("Time for dense:", delta_dense.total_seconds())
+
+    sec_dense_x = DenseVectorNumpy(dense_x.transpose(), sectype=secint)
+    sec_dense_y = DenseVectorNumpy(dense_y, sectype=secint)
     start = datetime.now()
     z = sec_dense_x.dot(sec_dense_y)
     assert await mpc.output(z) == real_res
@@ -105,23 +115,23 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
     # delta_sparse = end - start
     # print("Time for sparse naive opti:", delta_sparse.total_seconds())
 
-    sec_x = SparseVectorNaivePSI(x_sparse, secint)
-    sec_y = SparseVectorNaivePSI(y_sparse, secint)
-    start = datetime.now()
-    z = await sec_x.dot(sec_y)
-    assert await mpc.output(z) == real_res
-    end = datetime.now()
-    delta_sparse = end - start
-    print("Time for sparse psi:", delta_sparse.total_seconds())
+    # sec_x = SparseVectorNaivePSI(x_sparse, secint)
+    # sec_y = SparseVectorNaivePSI(y_sparse, secint)
+    # start = datetime.now()
+    # z = await sec_x.dot(sec_y)
+    # assert await mpc.output(z) == real_res
+    # end = datetime.now()
+    # delta_sparse = end - start
+    # print("Time for sparse psi:", delta_sparse.total_seconds())
 
-    sec_x = SparseVectorNaivePSIOpti(x_sparse, secint)
-    sec_y = SparseVectorNaivePSIOpti(y_sparse, secint)
-    start = datetime.now()
-    z = await sec_x.dot(sec_y)
-    assert await mpc.output(z) == real_res
-    end = datetime.now()
-    delta_sparse = end - start
-    print("Time for sparse psi optimized:", delta_sparse.total_seconds())
+    # sec_x = SparseVectorNaivePSIOpti(x_sparse, secint)
+    # sec_y = SparseVectorNaivePSIOpti(y_sparse, secint)
+    # start = datetime.now()
+    # z = await sec_x.dot(sec_y)
+    # assert await mpc.output(z) == real_res
+    # end = datetime.now()
+    # delta_sparse = end - start
+    # print("Time for sparse psi optimized:", delta_sparse.total_seconds())
 
     # sec_x = SparseVectorORAM(x_sparse, secint)
     # sec_y = SparseVectorORAM(y_sparse, secint)
@@ -132,24 +142,24 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
     # delta_sparse = end - start
     # print("Time for sparse ORAM:", delta_sparse.total_seconds())
 
-    sec_x = SparseVectorQuicksort(x_sparse, secint)
-    sec_y = SparseVectorQuicksort(y_sparse, secint)
-    start = datetime.now()
-    z = await sec_x.dot(sec_y)
-    assert await mpc.output(z) == real_res
-    end = datetime.now()
-    delta_sparse = end - start
-    print("Time for sparse quicksort:", delta_sparse.total_seconds())
+    # sec_x = SparseVectorQuicksort(x_sparse, secint)
+    # sec_y = SparseVectorQuicksort(y_sparse, secint)
+    # start = datetime.now()
+    # z = await sec_x.dot(sec_y)
+    # assert await mpc.output(z) == real_res
+    # end = datetime.now()
+    # delta_sparse = end - start
+    # print("Time for sparse quicksort:", delta_sparse.total_seconds())
 
-    sec_x = SparseVectorParallelQuicksort(x_sparse, secint)
-    sec_y = SparseVectorParallelQuicksort(y_sparse, secint)
-    start = datetime.now()
-    z = await sec_x.dot(sec_y)
-    assert await mpc.output(z) == real_res
-    end = datetime.now()
-    delta_sparse = end - start
-    print("Time for sparse parallel quicksort:", delta_sparse.total_seconds())
-    print("===END")
+    # sec_x = SparseVectorParallelQuicksort(x_sparse, secint)
+    # sec_y = SparseVectorParallelQuicksort(y_sparse, secint)
+    # start = datetime.now()
+    # z = await sec_x.dot(sec_y)
+    # assert await mpc.output(z) == real_res
+    # end = datetime.now()
+    # delta_sparse = end - start
+    # print("Time for sparse parallel quicksort:", delta_sparse.total_seconds())
+    # print("===END")
 
 
 async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, sparsity=0.001):
@@ -226,11 +236,14 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, sparsity=0.0
 
 async def main():
     await mpc.start()
-    await benchmark_dot_product()
+    await benchmark_dot_product(n_dim=10**3)
+    await benchmark_dot_product(n_dim=10**4)
+    await benchmark_dot_product(n_dim=10**5)
+    await benchmark_dot_product(n_dim=10**6)
     # await benchmark_sparse_sparse_mat_mult(m_dim=100)
     # await benchmark_sparse_sparse_mat_mult(m_dim=500)
-    await benchmark_sparse_sparse_mat_mult(m_dim=1000)
-    await benchmark_sparse_sparse_mat_mult(m_dim=5000)
+    # await benchmark_sparse_sparse_mat_mult(m_dim=1000)
+    # await benchmark_sparse_sparse_mat_mult(m_dim=5000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=10000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=100000)
     await mpc.shutdown()
