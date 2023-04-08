@@ -118,13 +118,13 @@ async def shuffle_3PC(input_list):
     other_seed = await mpc.transfer(
         self_seed, sender_receivers=[(0, 1), (1, 2), (2, 0)]
     )
-    seeds[(mpc.pid + 1) % 3] = self_seed
-    seeds[(mpc.pid - 1) % 3] = other_seed[0]
+    seeds[(mpc.pid - 1) % 3] = self_seed
+    seeds[(mpc.pid + 1) % 3] = other_seed[0]
 
     # Permuting the lists
     for i in range(3):
         if mpc.pid != i:
-            output_list = permute(output_list, seeds[0])
+            output_list = permute(output_list, seeds[i])
 
         output_list = partial_reshare(output_list, ignore=[i])
     return output_list
@@ -143,14 +143,8 @@ async def test():
     x = partial_reshare(x, ignore=[2])
     print(await mpc.output(x))
 
-    seeds = [None] * 3
-    self_seed = int.from_bytes(os.urandom(16), "big")
-    other_seed = await mpc.transfer(
-        self_seed, sender_receivers=[(0, 1), (1, 2), (2, 0)]
-    )
-    seeds[(mpc.pid + 1) % 3] = self_seed
-    seeds[(mpc.pid - 1) % 3] = other_seed[0]
-    print(seeds)
+    s = await shuffle_3PC(x)
+    print(await mpc.output(s))
 
     await mpc.shutdown()
 
