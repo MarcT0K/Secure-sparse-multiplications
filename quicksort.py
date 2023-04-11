@@ -9,11 +9,20 @@ import random
 from mpyc.runtime import mpc
 
 from shuffle import np_shuffle
+from resharing import shuffle_3PC
 
 
 async def quicksort(sec_list, sectype, rec_call=False, key=None):
     if not rec_call:
+        start = datetime.datetime.now()
         mpc.random.shuffle(sectype, sec_list)
+        # if len(mpc.parties) == 3:
+        #     sec_list = await shuffle_3PC(sec_list)
+        # else:
+        #     mpc.random.shuffle(sectype, sec_list)
+        await mpc.barrier()
+        end = datetime.datetime.now()
+        print("shuffle time:", (end - start).total_seconds())
 
     if 1 < len(sec_list):
         p, curr_list = await partition(sec_list, key=key)
@@ -50,7 +59,11 @@ async def parallel_quicksort(sec_arr, sectype, key=None):
     if init_shape[0] == 1:
         return res
 
+    start = datetime.datetime.now()
     res = mpc.np_tolist(await np_shuffle(sectype, res))
+    await mpc.barrier()
+    end = datetime.datetime.now()
+    print("shuffle time:", (end - start).total_seconds())
 
     key_func = (lambda x: x) if key is None else key
     pivots = [-1, len(res)]
