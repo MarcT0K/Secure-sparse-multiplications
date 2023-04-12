@@ -8,8 +8,8 @@ import random
 
 from mpyc.runtime import mpc
 
+from resharing import np_shuffle_3PC, shuffle_3PC
 from shuffle import np_shuffle
-from resharing import shuffle_3PC, np_shuffle_3PC
 
 
 async def quicksort(sec_list, sectype, rec_call=False, key=None):

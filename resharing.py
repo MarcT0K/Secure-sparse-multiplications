@@ -1,16 +1,12 @@
 import asyncio
-from datetime import datetime
-import pickle
 import os
+import pickle
 import random
+from datetime import datetime
 
 import numpy as np
-
-from mpyc import thresha
+from mpyc import asyncoro, finfields, sectypes, thresha
 from mpyc.runtime import mpc
-from mpyc import sectypes
-from mpyc import finfields
-from mpyc import asyncoro
 
 from shuffle import np_shuffle
 

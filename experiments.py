@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from datetime import datetime
 
 import numpy as np
@@ -9,11 +10,10 @@ from matrices import (
     DenseMatrixNaive,
     DenseMatrixNumpy,
     SparseMatrixColumn,
+    SparseMatrixColumnNumpy,
     SparseMatrixRow,
     SparseMatrixRowNumpy,
-    SparseMatrixColumnNumpy,
 )
-
 from vectors import (
     DenseVector,
     DenseVectorNumpy,
@@ -204,8 +204,7 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, sparsity=0.0
     z = sec_dense_t.dot(sec_dense)
     await mpc.output(z.get(0, 0))
     await mpc.barrier()
-    await z.print()
-    print(z.shape)
+    # await z.print()
     end = datetime.now()
     delta_dense = end - start
     print("Time for dense with numpy optimization:", delta_dense.total_seconds())
@@ -215,7 +214,7 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, sparsity=0.0
 
     start = datetime.now()
     z = await sec_x.dot(sec_y)
-    await z.print()
+    # await z.print()
     await mpc.barrier()
     end = datetime.now()
     delta_sparse = end - start
@@ -243,10 +242,10 @@ async def main():
     # await benchmark_dot_product(n_dim=10**4)
     # await benchmark_dot_product(n_dim=10**5)
     # await benchmark_dot_product(n_dim=10**6)
-    await benchmark_sparse_sparse_mat_mult(m_dim=10, sparsity=0.01)
-    # await benchmark_sparse_sparse_mat_mult(m_dim=100)
-    # await benchmark_sparse_sparse_mat_mult(m_dim=500)
-    # await benchmark_sparse_sparse_mat_mult(m_dim=1000)
+
+    await benchmark_sparse_sparse_mat_mult(m_dim=100)
+    await benchmark_sparse_sparse_mat_mult(m_dim=500)
+    await benchmark_sparse_sparse_mat_mult(m_dim=1000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=5000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=10000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=100000)

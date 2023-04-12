@@ -1,3 +1,4 @@
+import datetime
 from abc import abstractmethod
 from random import randint
 from typing import List, Optional, Tuple, Union
@@ -6,12 +7,10 @@ import numpy as np
 import scipy.sparse
 from mpyc.runtime import mpc
 
-from sortable_tuple import SortableTuple
-from shuffle import np_shuffle
-from resharing import np_shuffle_3PC
 from quicksort import parallel_quicksort
-
-import datetime
+from resharing import np_shuffle_3PC
+from shuffle import np_shuffle
+from sortable_tuple import SortableTuple
 
 SparseMatrixListType = List[List[int]]
 ScipySparseMatType = scipy.sparse._coo.coo_matrix

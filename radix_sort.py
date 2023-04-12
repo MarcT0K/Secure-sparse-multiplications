@@ -7,8 +7,9 @@ import math
 import random
 
 from mpyc.random import shuffle
-from shuffle import np_shuffle
 from mpyc.runtime import mpc
+
+from shuffle import np_shuffle
 
 
 async def bin_vec_to_B(bin_vect):
