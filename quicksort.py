@@ -9,7 +9,7 @@ import random
 from mpyc.runtime import mpc
 
 from shuffle import np_shuffle
-from resharing import shuffle_3PC
+from resharing import shuffle_3PC, np_shuffle_3PC
 
 
 async def quicksort(sec_list, sectype, rec_call=False, key=None):
@@ -51,7 +51,7 @@ async def partition(sec_list, key=None):
     return p, res
 
 
-async def parallel_quicksort(sec_arr, sectype, key=None):
+async def parallel_quicksort(sec_arr, sectype, key=None, max_key_val=10**6):
     """Parallel implementation of the oblivious quicksort."""
     res = mpc.np_copy(sec_arr)
     init_shape = res.shape
@@ -59,14 +59,15 @@ async def parallel_quicksort(sec_arr, sectype, key=None):
     if init_shape[0] == 1:
         return res
 
-    start = datetime.datetime.now()
-    res = mpc.np_tolist(await np_shuffle(sectype, res))
-    await mpc.barrier()
-    end = datetime.datetime.now()
-    print("shuffle time:", (end - start).total_seconds())
+    if len(mpc.parties) == 3:
+        res = mpc.np_tolist(await np_shuffle_3PC(res))
+    else:
+        res = mpc.np_tolist(await np_shuffle(sectype, res))
 
     key_func = (lambda x: x) if key is None else key
     pivots = [-1, len(res)]
+
+    key_vect = [key_func(res[i]) * 1000 for i in range(len(res))]
 
     while len(pivots) - 2 != len(res):
         end_of_partitions = [
@@ -75,11 +76,11 @@ async def parallel_quicksort(sec_arr, sectype, key=None):
             for _i in range(pivots[ind] + 1, pivots[ind + 1] - 1)
         ]
         end_of_partitions_vect = mpc.np_fromlist(
-            [key_func(res[p]) for p in end_of_partitions]
+            [key_vect[p] for p in end_of_partitions]
         )
         val_vect = mpc.np_fromlist(
             [
-                key_func(res[i])
+                key_vect[i]
                 for i in range(len(res))
                 if i not in pivots and i not in end_of_partitions
             ]
@@ -97,11 +98,13 @@ async def parallel_quicksort(sec_arr, sectype, key=None):
                 p = i + 1
                 pivot_count += 1
                 res[p], res[j] = res[j], res[p]
+                key_vect[p], key_vect[j] = key_vect[j], key_vect[p]
                 pivots.append(p)
             else:
                 if plaintext_comp[j - pivot_count]:
                     i += 1
                     res[i], res[j] = res[j], res[i]
+                    key_vect[i], key_vect[j] = key_vect[j], key_vect[i]
 
         pivots.sort()
         i = 0

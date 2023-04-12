@@ -142,14 +142,14 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
     # delta_sparse = end - start
     # print("Time for sparse ORAM:", delta_sparse.total_seconds())
 
-    sec_x = SparseVectorQuicksort(x_sparse, secint)
-    sec_y = SparseVectorQuicksort(y_sparse, secint)
-    start = datetime.now()
-    z = await sec_x.dot(sec_y)
-    assert await mpc.output(z) == real_res
-    end = datetime.now()
-    delta_sparse = end - start
-    print("Time for sparse quicksort:", delta_sparse.total_seconds())
+    # sec_x = SparseVectorQuicksort(x_sparse, secint)
+    # sec_y = SparseVectorQuicksort(y_sparse, secint)
+    # start = datetime.now()
+    # z = await sec_x.dot(sec_y)
+    # assert await mpc.output(z) == real_res
+    # end = datetime.now()
+    # delta_sparse = end - start
+    # print("Time for sparse quicksort:", delta_sparse.total_seconds())
 
     sec_x = SparseVectorParallelQuicksort(x_sparse, secint)
     sec_y = SparseVectorParallelQuicksort(y_sparse, secint)
@@ -236,13 +236,13 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, sparsity=0.0
 
 async def main():
     await mpc.start()
-    await benchmark_dot_product(n_dim=10**3)
-    await benchmark_dot_product(n_dim=10**4)
-    await benchmark_dot_product(n_dim=10**5)
-    await benchmark_dot_product(n_dim=10**6)
-    # await benchmark_sparse_sparse_mat_mult(m_dim=100)
-    # await benchmark_sparse_sparse_mat_mult(m_dim=500)
-    # await benchmark_sparse_sparse_mat_mult(m_dim=1000)
+    # await benchmark_dot_product(n_dim=10**3)
+    # await benchmark_dot_product(n_dim=10**4)
+    # await benchmark_dot_product(n_dim=10**5)
+    # await benchmark_dot_product(n_dim=10**6)
+    await benchmark_sparse_sparse_mat_mult(m_dim=100)
+    await benchmark_sparse_sparse_mat_mult(m_dim=500)
+    await benchmark_sparse_sparse_mat_mult(m_dim=1000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=5000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=10000)
     # await benchmark_sparse_sparse_mat_mult(m_dim=100000)
