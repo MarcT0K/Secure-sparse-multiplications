@@ -135,7 +135,6 @@ async def shuffle_3PC(input_list):
 
 def np_permute(input_list, seed, axis, inv=False):
     random.seed(seed)
-    res = mpc.np_copy(input_list)
     permutation = list(range(len(input_list)))
     random.shuffle(permutation)
 
@@ -144,6 +143,7 @@ def np_permute(input_list, seed, axis, inv=False):
         inv[permutation] = np.arange(len(inv), dtype=inv.dtype)
         permutation = inv
 
+    res = mpc.np_copy(input_list)
     mpc.np_update(res, permutation, input_list)
     return res
 
@@ -173,6 +173,11 @@ async def np_shuffle_3PC(input_list, axis=-1):
 async def test():
     await mpc.start()
     secint = mpc.SecInt(64)
+
+    y = random.randint(0, 100)
+    print(y)
+    y = mpc.input(secint(y))
+    print(await mpc.output(y))
 
     # x = [[secint(i), secint(i)] for i in range(100)]
     x = [secint(i) for i in range(100)]

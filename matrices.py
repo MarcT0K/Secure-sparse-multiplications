@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from random import randint
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -7,6 +8,8 @@ from mpyc.runtime import mpc
 
 from sortable_tuple import SortableTuple
 from shuffle import np_shuffle
+from resharing import np_shuffle_3PC
+from quicksort import parallel_quicksort
 
 import datetime
 
@@ -130,7 +133,6 @@ class SparseMatrixColumn(SecureMatrix):
             for k in range(self.shape[1]):
                 for left_i, left_value in self._mat[k]:
                     for right_j, right_value in other._mat[k]:
-
                         res.append([left_i, right_j, left_value * right_value])
 
             res = await self.sort_coroutine(res, self.sectype, key=SortableTuple)
@@ -146,7 +148,10 @@ class SparseMatrixColumn(SecureMatrix):
                 res[i - 1][0] = mpc.if_else(sec_comp_res, -1, res[i - 1][0])
                 # Only need one placeholder per tuple to make it invalid
 
-            mpc.random.shuffle(self.sectype, res)
+            if len(mpc.parties) == 3:
+                res = await np_shuffle_3PC(res)
+            else:
+                mpc.random.shuffle(self.sectype, res)
 
             final_res = []
             for i in range(len(res)):
@@ -220,33 +225,56 @@ class SparseMatrixColumnNumpy(SecureMatrix):
                     res = mpc.np_vstack((res, res_k))
 
             sorting_keys = res[:, 0] * (other.shape[1] + 1) + res[:, 1]
+
             res = mpc.np_column_stack((mpc.np_transpose(sorting_keys), res))
 
             start = datetime.datetime.now()
-            res = mpc.np_sort(res, axis=0, key=lambda tup: tup[0])
+            if len(mpc.parties) == 3:
+                assert self.shape[0] * other.shape[1] * 10**3  # Prevent overflow
+                if mpc.pid == 0:
+                    rand_vect = [
+                        randint(0, 10**3) for _i in range(sorting_keys.shape[0])
+                    ]
+                else:
+                    rand_vect = None
+
+                rand_vect = mpc.np_fromlist(
+                    [self.sectype(i) for i in await mpc.transfer(rand_vect, senders=0)]
+                )
+                rand_sorting_keys = sorting_keys * 10**3 + rand_vect
+                res = mpc.np_column_stack((mpc.np_transpose(rand_sorting_keys), res))
+                res = await parallel_quicksort(
+                    res, self.sectype, key=lambda tup: tup[0]
+                )
+                res = res[:, 1:]
+            else:
+                res = mpc.np_sort(res, axis=0, key=lambda tup: tup[0])
             await mpc.barrier()
             delta = datetime.datetime.now() - start
             print("Sorting time: ", delta.total_seconds())
 
             comp = res[0 : res.shape[0] - 1, 0] == res[1 : res.shape[0], 0]
-            col_val = [res[0, 3]]
-            col_i = []
-            for i in range(res.shape[0] - 1):
-                col_val.append(
-                    mpc.if_else(comp[i], res[i, 3] + res[i + 1, 3], res[i + 1, 3])
-                )
-                col_i.append(mpc.if_else(comp[i], -1, res[i, 1]))
-                # Only need one placeholder per tuple to make it invalid
-            col_i.append(res[-1, 1])
-
-            # I do a unique update because I had issue with iterative updates.
-            mpc.np_update(res, (range(len(col_val)), 3), mpc.np_fromlist(col_val))
-            mpc.np_update(res, (range(len(col_i)), 1), mpc.np_fromlist(col_i))
-
             res = res[:, 1:]  # We remove the sorting key
+
+            col_val = mpc.np_tolist(res[:, -1])
+            col_i = res[:-1, 0] * (1 - comp) - comp
+
+            for i in range(res.shape[0] - 1):
+                col_val[i + 1] = col_val[i + 1] + comp[i] * col_val[i]
+            col_i = mpc.np_hstack((col_i, res[-1, 1:2]))
+            col_val = mpc.np_transpose(mpc.np_fromlist(col_val))
+            col_i = mpc.np_transpose(col_i)
+
+            res = mpc.np_transpose(mpc.np_vstack((col_i, res[:, 1], col_val)))
+
+            await mpc.barrier()
+
             start = datetime.datetime.now()
-            print(res.shape)
-            res = await np_shuffle(self.sectype, res)
+
+            if len(mpc.parties) == 3:
+                res = await np_shuffle_3PC(res)
+            else:
+                mpc.random.shuffle(self.sectype, res)
             await mpc.barrier()
             delta = datetime.datetime.now() - start
             print("Shuffling time: ", delta.total_seconds())
@@ -255,6 +283,7 @@ class SparseMatrixColumnNumpy(SecureMatrix):
             zero_test = await mpc.np_is_zero_public(
                 res[:, 0] + 1
             )  # Here, we leak the number of non-zero elements in the output matrix
+
             mask = [i for i, test in enumerate(zero_test) if not test]
             final_res = mpc.np_tolist(res[mask, :])
 
