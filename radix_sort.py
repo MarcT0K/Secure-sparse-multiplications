@@ -7,6 +7,7 @@ import math
 import random
 
 from mpyc.random import shuffle
+from shuffle import np_shuffle
 from mpyc.runtime import mpc
 
 
@@ -28,19 +29,31 @@ def dest_comp(B, sectype):
             mpc.np_update(S, (i, j), temp)
 
     T = mpc.np_multiply(S, B)
-    return mpc.np_sum(T, axis=1)
+    return mpc.np_transpose(mpc.np_sum(T, axis=1))
 
 
 async def reveal_sort(keys, data, sectype):
-    # TODO: make a difference when data is a vector and when it is a matrix
-    assert len(keys) == len(data)
-    merged = [[keys[i]] + [data[i]] for i in range(len(data))]
-    shuffle(sectype, merged)
-    shuffled_keys = [merged[i][0] for i in range(len(data))]
+    assert keys.shape[0] == data.shape[0]
+
+    if len(data.shape) == 1:
+        merged = mpc.np_transpose(mpc.np_vstack((keys, data)))
+    else:
+        merged = mpc.np_transpose(
+            mpc.np_vstack((mpc.np_transpose(keys), mpc.np_transpose(data)))
+        )
+
+    merged = await np_shuffle(sectype, merged)
+    shuffled_keys = merged[:, 0]
+
     plaintext_keys = await mpc.output(shuffled_keys)
-    merged = [[plaintext_keys[i]] + [data[i]] for i in range(len(data))]
-    sorted_data = sorted(merged, key=lambda tup: tup[0])
-    return [tup[1:] for tup in sorted_data]  # remove the plaintext key
+
+    sorted_indices = list(
+        ind for (ind, _key) in sorted(enumerate(plaintext_keys), key=lambda tup: tup[1])
+    )
+
+    sorted_data = mpc.np_copy(merged)
+    mpc.np_update(sorted_data, sorted_indices, merged)
+    return sorted_data[:, 1:]  # remove the plaintext key
 
 
 def int_to_secure_bits(number, sectype, nb_bits):
@@ -48,33 +61,31 @@ def int_to_secure_bits(number, sectype, nb_bits):
     return [sectype(int(c)) for c in bitstring]
 
 
-async def radix_sort(data, sectype):
-    assert len(data[0]) > 0  # list of tuples [key, values...]
-    assert len(data[0][0]) > 0  # Key is a tuple of secure bits
+async def radix_sort(data, sectype, nb_bits=None):
+    n, l = data.shape
+    if nb_bits is None:
+        l -= 1  # the last dimension is the complete key
+    else:
+        l = nb_bits
 
-    l = len(data[0][0])
-    n = len(data)
+    assert n > 0 and l > 0
+
     h = mpc.np_fromlist([sectype(i) for i in range(n)])
-    bit_keys = [mpc.np_fromlist([data[i][0][j] for i in range(n)]) for j in range(l)]
-    h_j = h.copy()
-    bp_j = bit_keys[0]
+    h_j = mpc.np_copy(h)
+    bp_j = data[:, 0]
+
     for i in range(l + 1):
-        print("HERE")
         B_j = await bin_vec_to_B(bp_j)
         c_j = dest_comp(B_j, sectype)
-        print("HEREA")
         cp_j = await reveal_sort(h_j, c_j, sectype)
-        print("HEREB")
 
         if i < l:
-            b_jpp = bit_keys[i + 1]
-            concat_res = [b_jpp[k] + [h_j[k]] for k in range(n)]
+            b_jpp = data[:, i + 1]
+            concat_res = mpc.np_transpose(mpc.np_vstack((b_jpp, h_j)))
             sort_res = await reveal_sort(cp_j, concat_res, sectype)
-            h_j = []
-            bp_j = []
-            for k in range(n):  # We extract h_{j+1} and b_{j+1}
-                h_j.append(sort_res[k][-1])
-                bp_j.append(sort_res[k][:-1])
+
+            h_j = sort_res[:, -1]
+            bp_j = mpc.np_transpose(sort_res[:, :-1])
         else:
             res = await reveal_sort(cp_j, data, sectype)
     return res
@@ -84,7 +95,7 @@ async def main():
     await mpc.start()
     sectype = mpc.SecInt(64)
     if mpc.pid == 0:
-        rand_list = [random.randint(0, 1024) for _ in range(1000)]
+        rand_list = [random.randint(0, 1) for _ in range(1000)]
     else:
         rand_list = []
 
@@ -93,20 +104,20 @@ async def main():
     nb_bits = int(math.log(max(rand_list), 2)) + 1
     print(nb_bits)
 
-    l = [
+    l = mpc.np_vstack(
         [
-            int_to_secure_bits(r, sectype, nb_bits),
-            sectype(r),
+            mpc.np_fromlist(int_to_secure_bits(r, sectype, nb_bits) + [sectype(r)])
+            for r in rand_list
         ]
-        for r in rand_list
-    ]
-    sorted = await radix_sort(l, sectype=sectype)
-    print(await mpc.output([c for _, c in sorted]))
+    )
+    print(l)
+    print(l.shape)
+    print(await mpc.output(l))
+
+    s = await radix_sort(l, sectype=sectype)
+    print(await mpc.output(s))
     await mpc.shutdown()
 
-
-# TODO: We should now improve the shuffle because it is the main bottleneck for the radix sort
-# TODO: implement the radix sort of Bogdanov et al.
 
 if __name__ == "__main__":
     mpc.run(main())
