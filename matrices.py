@@ -112,7 +112,7 @@ class SparseMatrixColumn(SecureMatrix):
             else sort_coroutine
         )
         self.shape = sparse_mat.shape
-        to_sec_int = lambda x: self.sectype(int(x))
+        to_sec_int = lambda x: mpc._reshare(self.sectype(int(x)))
         self._mat = [[] for i in range(sparse_mat.shape[1])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
             self._mat[j].append((to_sec_int(i), to_sec_int(v)))
@@ -179,7 +179,7 @@ class SparseMatrixColumnNumpy(SecureMatrix):
         super().__init__(sectype)
 
         self.shape = sparse_mat.shape
-        to_sec_int = lambda x: self.sectype(int(x))
+        to_sec_int = lambda x: mpc._reshare(self.sectype(int(x)))
         self._mat = [[] for i in range(sparse_mat.shape[1])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
             self._mat[j] += [to_sec_int(i), to_sec_int(v)]
@@ -298,7 +298,7 @@ class SparseMatrixRow(SecureMatrix):
     def __init__(self, sparse_mat: ScipySparseMatType, sectype=None):
         super().__init__(sectype)
         self.shape = sparse_mat.shape
-        to_sec_int = lambda x: self.sectype(int(x))
+        to_sec_int = lambda x: mpc._reshare(self.sectype(int(x)))
         self._mat = [[] for i in range(sparse_mat.shape[0])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
             self._mat[i].append((to_sec_int(j), to_sec_int(v)))
@@ -317,7 +317,7 @@ class SparseMatrixRowNumpy(SecureMatrix):
     def __init__(self, sparse_mat: ScipySparseMatType, sectype=None):
         super().__init__(sectype)
         self.shape = sparse_mat.shape
-        to_sec_int = lambda x: self.sectype(int(x))
+        to_sec_int = lambda x: mpc._reshare(self.sectype(int(x)))
         self._mat = [[] for i in range(sparse_mat.shape[0])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
             self._mat[i] += [to_sec_int(j), to_sec_int(v)]
@@ -359,11 +359,11 @@ class DenseMatrixNumpy(SecureMatrix):
     def __init__(self, mat, sectype=None):
         super().__init__(sectype)
         if isinstance(mat, mpc.SecureArray):
-            self._mat = mat
+            self._mat = mpc._reshare(mat)
             self.shape = (len(mat), len(mat[0]))
         else:
             self.shape = mat.shape
-            temp_mat = [sectype(i) for i in mat.flatten().tolist()[0]]
+            temp_mat = [mpc._reshare(sectype(i)) for i in mat.flatten().tolist()[0]]
             self._mat = mpc.np_reshape(mpc.np_fromlist(temp_mat), self.shape)
 
     def dot(self, other):
