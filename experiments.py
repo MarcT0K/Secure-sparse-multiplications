@@ -87,11 +87,13 @@ class ExperimentalEnvironment:
     @asynccontextmanager
     async def benchmark(self, parameters):
         self._experiment_count += 1
+        await mpc.barrier(f"Before Experiment {self._experiment_count}")
+
         start_ts = datetime.now()
         start_bytes = ExperimentalEnvironment.current_sent_bytes()
         try:
             yield self
-            # await mpc.barrier(f"Experiment {self._experiment_count}")
+            await mpc.barrier(f"Experiment {self._experiment_count}")
         except MemoryError:
             parameters["Memory overflow"] = True
         else:
@@ -105,13 +107,6 @@ class ExperimentalEnvironment:
             self._csv_writer.writerow(parameters)
             self._file.flush()
         print(f"Algorithm {parameters['Algorithm']} DONE")
-
-    @asynccontextmanager
-    async def control_memory_usage(self):
-        try:
-            yield self
-        except MemoryError:
-            raise ValueError
 
     async def shutdown(self):
         await mpc.shutdown()
@@ -134,7 +129,7 @@ active_exp_env: Optional[ExperimentalEnvironment] = None
 
 async def benchmark_dot_product(n_dim=10**5, density=0.001):
     print("Sparse dot benchmark: n=", n_dim, " density=", density)
-    secint = mpc.SecInt(64)
+    secint = mpc.SecInt(32)
 
     if mpc.pid == 0:
         x_sparse = scipy.sparse.random(
@@ -155,7 +150,13 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
     real_res = dense_x.transpose().dot(dense_y)[0, 0]
     print("Real result:", real_res)
 
-    async with active_exp_env.control_memory_usage():
+    params = {
+        "Algorithm": "Dense sharing",
+        "Nb. rows": n_dim,
+        "Nb. columns": 1,
+        "Density": density,
+    }
+    async with active_exp_env.benchmark(params):
         sec_dense_x = DenseVectorNumpy(dense_x.transpose(), sectype=secint)
         sec_dense_y = DenseVectorNumpy(dense_y, sectype=secint)
 
@@ -169,8 +170,18 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
         z = sec_dense_x.dot(sec_dense_y)
         assert await mpc.output(z) == real_res
 
-    sec_x = SparseVectorNumpy(x_sparse, secint)
-    sec_y = SparseVectorNumpy(y_sparse, secint)
+    del dense_x, dense_y
+
+    params = {
+        "Algorithm": "Sparse sharing",
+        "Nb. rows": n_dim,
+        "Nb. columns": 1,
+        "Density": density,
+    }
+    async with active_exp_env.benchmark(params):
+        sec_x = SparseVectorNumpy(x_sparse, secint)
+        sec_y = SparseVectorNumpy(y_sparse, secint)
+
     params = {
         "Algorithm": "Sparse w/ Batcher",
         "Nb. rows": n_dim,
@@ -199,8 +210,16 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
     # delta_sparse = end - start
     # print("Time for sparse psi optimized:", delta_sparse.total_seconds())
 
-    sec_x = SparseVectorParallelQuicksort(x_sparse, secint)
-    sec_y = SparseVectorParallelQuicksort(y_sparse, secint)
+    params = {
+        "Algorithm": "Sparse sharing",
+        "Nb. rows": n_dim,
+        "Nb. columns": 1,
+        "Density": density,
+    }
+    async with active_exp_env.benchmark(params):
+        sec_x = SparseVectorParallelQuicksort(x_sparse, secint)
+        sec_y = SparseVectorParallelQuicksort(y_sparse, secint)
+
     params = {
         "Algorithm": "Sparse w/ Quicksort",
         "Nb. rows": n_dim,
@@ -211,7 +230,7 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
         z = await sec_x.dot(sec_y)
         assert await mpc.output(z) == real_res
 
-    print("===END")
+    print("=== END")
 
 
 async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, density=0.001):
@@ -229,8 +248,16 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, density=0.00
     x_sparse = await mpc.transfer(x_sparse, senders=0)
     dense_mat = x_sparse.todense().astype(int)
 
-    sec_dense_t = DenseMatrixNumpy(dense_mat.transpose(), sectype=secint)
-    sec_dense = DenseMatrixNumpy(dense_mat, sectype=secint)
+    params = {
+        "Algorithm": "Dense sharing",
+        "Nb. rows": n_dim,
+        "Nb. columns": m_dim,
+        "Density": density,
+    }
+    async with active_exp_env.benchmark(params):
+        sec_dense_t = DenseMatrixNumpy(dense_mat.transpose(), sectype=secint)
+        sec_dense = DenseMatrixNumpy(dense_mat, sectype=secint)
+    del dense_mat
 
     params = {
         "Algorithm": "Dense",
@@ -240,9 +267,17 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, density=0.00
     }
     async with active_exp_env.benchmark(params):
         z = sec_dense_t.dot(sec_dense)
+        assert z._mat.shape == (m_dim, m_dim)
 
-    sec_x = SparseMatrixColumnNumpy(x_sparse.transpose(), secint)
-    sec_y = SparseMatrixRowNumpy(x_sparse, secint)
+    params = {
+        "Algorithm": "Sparse sharing",
+        "Nb. rows": n_dim,
+        "Nb. columns": m_dim,
+        "Density": density,
+    }
+    async with active_exp_env.benchmark(params):
+        sec_x = SparseMatrixColumnNumpy(x_sparse.transpose(), secint)
+        sec_y = SparseMatrixRowNumpy(x_sparse, secint)
 
     params = {
         "Algorithm": "Sparse w/ Quicksort",
