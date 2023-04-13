@@ -53,12 +53,17 @@ class SparseVector(SecureMatrix):
 
         super().__init__(sectype)
         self.shape = sparse_mat.shape
-        to_sec_int = lambda x: mpc._reshare(self.sectype(int(x)))
+        to_sec_int = lambda x: self.sectype(int(x))
 
         self.shape = sparse_mat.shape
         self._mat = []
         for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            self._mat.append([to_sec_int(i), to_sec_int(v)])
+            self._mat.append(to_sec_int(i))
+            self._mat.append(to_sec_int(v))
+        self._mat = mpc.input(self._mat, senders=0)
+        self._mat = [
+            [self._mat[i], self._mat[i + 1]] for i in range(0, len(self._mat) // 2, 2)
+        ]
 
     def dot(self, other):
         if isinstance(other, SparseVector):
@@ -79,9 +84,8 @@ class SparseVectorNumpy(SparseVector):
         np_mat = []
         for i in range(len(self._mat)):
             np_mat += self._mat[i]
-        np_mat = mpc._reshare(
-            mpc.np_reshape(mpc.np_fromlist(np_mat), (len(self._mat), 2))
-        )
+        np_mat = mpc.np_reshape(mpc.np_fromlist(np_mat), (len(self._mat), 2))
+
         self._mat = np_mat
 
     def dot(self, other):
@@ -185,7 +189,7 @@ class SparseVectorORAM(SecureMatrix):
 
         super().__init__(sectype)
         self.shape = sparse_mat.shape
-        to_sec_int = lambda x: mpc._reshare(self.sectype(int(x)))
+        to_sec_int = lambda x: mpc.input(self.sectype(int(x)), senders=0)
 
         self.shape = sparse_mat.shape
         self._mat = [mpc.seclist([], self.sectype), mpc.seclist([], self.sectype)]

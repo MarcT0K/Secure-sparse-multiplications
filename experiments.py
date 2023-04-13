@@ -129,7 +129,7 @@ active_exp_env: Optional[ExperimentalEnvironment] = None
 
 async def benchmark_dot_product(n_dim=10**5, density=0.001):
     print("Sparse dot benchmark: n=", n_dim, " density=", density)
-    secint = mpc.SecInt(32)
+    secint = mpc.SecInt(64)
 
     if mpc.pid == 0:
         x_sparse = scipy.sparse.random(
@@ -160,15 +160,17 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
         sec_dense_x = DenseVectorNumpy(dense_x.transpose(), sectype=secint)
         sec_dense_y = DenseVectorNumpy(dense_y, sectype=secint)
 
-    params = {
-        "Algorithm": "Dense",
-        "Nb. rows": n_dim,
-        "Nb. columns": 1,
-        "Density": density,
-    }
-    async with active_exp_env.benchmark(params):
-        z = sec_dense_x.dot(sec_dense_y)
-        assert await mpc.output(z) == real_res
+    for i in range(10):
+        params = {
+            "Algorithm": "Dense",
+            "Nb. rows": n_dim,
+            "Nb. columns": 1,
+            "Density": density,
+        }
+        async with active_exp_env.benchmark(params):
+            z = sec_dense_x.dot(sec_dense_y)
+            print(await mpc.output(z))
+            assert await mpc.output(z) == real_res
 
     del dense_x, dense_y
 
@@ -188,9 +190,10 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
         "Nb. columns": 1,
         "Density": density,
     }
-    async with active_exp_env.benchmark(params):
-        z = sec_x.dot(sec_y)
-        assert await mpc.output(z) == real_res
+    for i in range(10):
+        async with active_exp_env.benchmark(params):
+            z = sec_x.dot(sec_y)
+            assert await mpc.output(z) == real_res
 
     # sec_x = SparseVectorNaiveOpti(x_sparse, secint)
     # sec_y = SparseVectorNaiveOpti(y_sparse, secint)
@@ -226,9 +229,10 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
         "Nb. columns": 1,
         "Density": density,
     }
-    async with active_exp_env.benchmark(params):
-        z = await sec_x.dot(sec_y)
-        assert await mpc.output(z) == real_res
+    for i in range(10):
+        async with active_exp_env.benchmark(params):
+            z = await sec_x.dot(sec_y)
+            assert await mpc.output(z) == real_res
 
     print("=== END")
 
