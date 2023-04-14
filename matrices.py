@@ -223,6 +223,13 @@ class SparseMatrixColumnNumpy(SecureMatrix):
                 else:
                     res = mpc.np_vstack((res, res_k))
 
+            if res.shape[0] == 1:
+                return SparseMatrixCOO(
+                    mpc.np_tolist(res),
+                    sectype=self.sectype,
+                    shape=(self.shape[0], other.shape[1]),
+                )
+
             sorting_keys = res[:, 0] * (other.shape[1] + 1) + res[:, 1]
 
             res = mpc.np_column_stack((mpc.np_transpose(sorting_keys), res))
@@ -269,7 +276,7 @@ class SparseMatrixColumnNumpy(SecureMatrix):
             await mpc.barrier()
 
             start = datetime.datetime.now()
-
+            print("here")
             if len(mpc.parties) == 3:
                 res = await np_shuffle_3PC(res)
             else:
