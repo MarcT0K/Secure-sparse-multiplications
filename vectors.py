@@ -62,7 +62,7 @@ class SparseVector(SecureMatrix):
             self._mat.append(to_sec_int(v))
         self._mat = mpc.input(self._mat, senders=0)
         self._mat = [
-            [self._mat[i], self._mat[i + 1]] for i in range(0, len(self._mat) // 2, 2)
+            [self._mat[i], self._mat[i + 1]] for i in range(0, len(self._mat), 2)
         ]
 
     def dot(self, other):

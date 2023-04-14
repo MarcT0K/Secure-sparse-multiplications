@@ -52,7 +52,6 @@ class ExperimentalEnvironment:
             self._csv_writer = DictWriter(self._file, csv_fields)
             self._csv_writer.writeheader()
 
-        self._experiment_count = 0
         self.prev_soft, self.prev_hard = resource.getrlimit(resource.RLIMIT_AS)
 
     @staticmethod
@@ -86,14 +85,13 @@ class ExperimentalEnvironment:
 
     @asynccontextmanager
     async def benchmark(self, parameters):
-        self._experiment_count += 1
-        await mpc.barrier(f"Before Experiment {self._experiment_count}")
+        await mpc.barrier(f"Before Experiment {parameters['Algorithm']}")
 
         start_ts = datetime.now()
         start_bytes = ExperimentalEnvironment.current_sent_bytes()
         try:
             yield self
-            await mpc.barrier(f"Experiment {self._experiment_count}")
+            await mpc.barrier(f"Experiment {parameters['Algorithm']}")
         except MemoryError:
             parameters["Memory overflow"] = True
         else:
@@ -160,7 +158,7 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
         sec_dense_x = DenseVectorNumpy(dense_x.transpose(), sectype=secint)
         sec_dense_y = DenseVectorNumpy(dense_y, sectype=secint)
 
-    for i in range(10):
+    for i in range(1):
         params = {
             "Algorithm": "Dense",
             "Nb. rows": n_dim,
@@ -169,31 +167,30 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
         }
         async with active_exp_env.benchmark(params):
             z = sec_dense_x.dot(sec_dense_y)
-            print(await mpc.output(z))
             assert await mpc.output(z) == real_res
 
     del dense_x, dense_y
 
-    params = {
-        "Algorithm": "Sparse sharing",
-        "Nb. rows": n_dim,
-        "Nb. columns": 1,
-        "Density": density,
-    }
-    async with active_exp_env.benchmark(params):
-        sec_x = SparseVectorNumpy(x_sparse, secint)
-        sec_y = SparseVectorNumpy(y_sparse, secint)
+    # params = {
+    #     "Algorithm": "Sparse sharing",
+    #     "Nb. rows": n_dim,
+    #     "Nb. columns": 1,
+    #     "Density": density,
+    # }
+    # async with active_exp_env.benchmark(params):
+    #     sec_x = SparseVectorNumpy(x_sparse, secint)
+    #     sec_y = SparseVectorNumpy(y_sparse, secint)
 
-    params = {
-        "Algorithm": "Sparse w/ Batcher",
-        "Nb. rows": n_dim,
-        "Nb. columns": 1,
-        "Density": density,
-    }
-    for i in range(10):
-        async with active_exp_env.benchmark(params):
-            z = sec_x.dot(sec_y)
-            assert await mpc.output(z) == real_res
+    # params = {
+    #     "Algorithm": "Sparse w/ Batcher",
+    #     "Nb. rows": n_dim,
+    #     "Nb. columns": 1,
+    #     "Density": density,
+    # }
+    # for i in range(1):
+    #     async with active_exp_env.benchmark(params):
+    #         z = sec_x.dot(sec_y)
+    #         assert await mpc.output(z) == real_res
 
     # sec_x = SparseVectorNaiveOpti(x_sparse, secint)
     # sec_y = SparseVectorNaiveOpti(y_sparse, secint)
@@ -229,7 +226,7 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
         "Nb. columns": 1,
         "Density": density,
     }
-    for i in range(10):
+    for i in range(1):
         async with active_exp_env.benchmark(params):
             z = await sec_x.dot(sec_y)
             assert await mpc.output(z) == real_res
