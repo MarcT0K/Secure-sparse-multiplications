@@ -2,4 +2,6 @@
 
 *.log
 *.csv
+!data/*.csv
+*.png
 .vscode

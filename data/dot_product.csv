@@ -1,0 +1,325 @@
+Algorithm,Nb. rows,Nb. columns,Density,Memory overflow,Runtime,Communication cost
+Dense sharing,1000,1,0.001,False,0.035023,56627
+Dense,1000,1,0.001,False,0.032256,372
+Sparse sharing,1000,1,0.001,False,0.00446,152
+Sparse w/ Quicksort,1000,1,0.001,False,0.069812,14802
+Dense sharing,1000,1,0.005,False,0.034595,56622
+Dense,1000,1,0.005,False,0.002649,372
+Sparse sharing,1000,1,0.005,False,0.002058,536
+Sparse w/ Quicksort,1000,1,0.005,False,0.159041,119333
+Dense sharing,1000,1,0.01,False,0.031899,56633
+Dense,1000,1,0.01,False,0.005144,372
+Sparse sharing,1000,1,0.01,False,0.002526,1016
+Sparse w/ Quicksort,1000,1,0.01,False,0.333971,373078
+Dense sharing,2000,1,0.001,False,0.062741,112624
+Dense,2000,1,0.001,False,0.007058,372
+Sparse sharing,2000,1,0.001,False,0.001517,248
+Sparse w/ Quicksort,2000,1,0.001,False,0.085827,36118
+Dense sharing,2000,1,0.005,False,0.092994,112617
+Dense,2000,1,0.005,False,0.002741,372
+Sparse sharing,2000,1,0.005,False,0.002855,1016
+Sparse w/ Quicksort,2000,1,0.005,False,0.324373,423466
+Dense sharing,2000,1,0.01,False,0.059373,112616
+Dense,2000,1,0.01,False,0.003296,372
+Sparse sharing,2000,1,0.01,False,0.003125,1976
+Sparse w/ Quicksort,2000,1,0.01,False,0.501432,832489
+Dense sharing,3000,1,0.001,False,0.103434,168594
+Dense,3000,1,0.001,False,0.004244,372
+Sparse sharing,3000,1,0.001,False,0.001991,344
+Sparse w/ Quicksort,3000,1,0.001,False,0.126565,64768
+Dense sharing,3000,1,0.005,False,0.100325,168616
+Dense,3000,1,0.005,False,0.009259,372
+Sparse sharing,3000,1,0.005,False,0.004364,1496
+Sparse w/ Quicksort,3000,1,0.005,False,0.500937,566324
+Dense sharing,3000,1,0.01,False,0.100049,168613
+Dense,3000,1,0.01,False,0.003816,372
+Sparse sharing,3000,1,0.01,False,0.007074,2936
+Sparse w/ Quicksort,3000,1,0.01,False,0.826758,1467402
+Dense sharing,4000,1,0.001,False,0.126953,224595
+Dense,4000,1,0.001,False,0.003591,372
+Sparse sharing,4000,1,0.001,False,0.001419,440
+Sparse w/ Quicksort,4000,1,0.001,False,0.165852,100739
+Dense sharing,4000,1,0.005,False,0.202814,224607
+Dense,4000,1,0.005,False,0.002908,372
+Sparse sharing,4000,1,0.005,False,0.002628,1976
+Sparse w/ Quicksort,4000,1,0.005,False,0.598579,835656
+Dense sharing,4000,1,0.01,False,0.154461,224607
+Dense,4000,1,0.01,False,0.003343,372
+Sparse sharing,4000,1,0.01,False,0.008233,3896
+Sparse w/ Quicksort,4000,1,0.01,False,1.130847,2008093
+Dense sharing,5000,1,0.001,False,0.125523,280647
+Dense,5000,1,0.001,False,0.003482,372
+Sparse sharing,5000,1,0.001,False,0.001705,536
+Sparse w/ Quicksort,5000,1,0.001,False,0.17289,140405
+Dense sharing,5000,1,0.005,False,0.12996,280637
+Dense,5000,1,0.005,False,0.003978,372
+Sparse sharing,5000,1,0.005,False,0.005011,2456
+Sparse w/ Quicksort,5000,1,0.005,False,0.643038,1210893
+Dense sharing,5000,1,0.01,False,0.123369,280630
+Dense,5000,1,0.01,False,0.003527,372
+Sparse sharing,5000,1,0.01,False,0.007909,4856
+Sparse w/ Quicksort,5000,1,0.01,False,1.28154,2829172
+Dense sharing,6000,1,0.001,False,0.173833,336637
+Dense,6000,1,0.001,False,0.003704,372
+Sparse sharing,6000,1,0.001,False,0.00208,632
+Sparse w/ Quicksort,6000,1,0.001,False,0.188675,180528
+Dense sharing,6000,1,0.005,False,0.165013,336621
+Dense,6000,1,0.005,False,0.003424,372
+Sparse sharing,6000,1,0.005,False,0.005511,2936
+Sparse w/ Quicksort,6000,1,0.005,False,0.733721,1592131
+Dense sharing,6000,1,0.01,False,0.205144,336618
+Dense,6000,1,0.01,False,0.003029,372
+Sparse sharing,6000,1,0.01,False,0.010449,5816
+Sparse w/ Quicksort,6000,1,0.01,False,1.88211,3465553
+Dense sharing,7000,1,0.001,False,0.186752,392622
+Dense,7000,1,0.001,False,0.004539,372
+Sparse sharing,7000,1,0.001,False,0.002061,728
+Sparse w/ Quicksort,7000,1,0.001,False,0.213785,188101
+Dense sharing,7000,1,0.005,False,0.236448,392635
+Dense,7000,1,0.005,False,0.005608,372
+Sparse sharing,7000,1,0.005,False,0.00618,3416
+Sparse w/ Quicksort,7000,1,0.005,False,0.822043,1562164
+Dense sharing,7000,1,0.01,False,0.173408,392588
+Dense,7000,1,0.01,False,0.00348,372
+Sparse sharing,7000,1,0.01,False,0.010188,6776
+Sparse w/ Quicksort,7000,1,0.01,False,2.737279,4244558
+Dense sharing,8000,1,0.001,False,0.245578,448629
+Dense,8000,1,0.001,False,0.004602,372
+Sparse sharing,8000,1,0.001,False,0.002309,824
+Sparse w/ Quicksort,8000,1,0.001,False,0.240447,231427
+Dense sharing,8000,1,0.005,False,0.208733,448620
+Dense,8000,1,0.005,False,0.00335,372
+Sparse sharing,8000,1,0.005,False,0.005186,3896
+Sparse w/ Quicksort,8000,1,0.005,False,1.055285,2003887
+Dense sharing,8000,1,0.01,False,0.211525,448598
+Dense,8000,1,0.01,False,0.003525,372
+Sparse sharing,8000,1,0.01,False,0.008738,7736
+Sparse w/ Quicksort,8000,1,0.01,False,2.554895,5162532
+Dense sharing,9000,1,0.001,False,0.260568,504605
+Dense,9000,1,0.001,False,0.004998,372
+Sparse sharing,9000,1,0.001,False,0.00194,920
+Sparse w/ Quicksort,9000,1,0.001,False,0.379479,350816
+Dense sharing,9000,1,0.005,False,0.243708,504596
+Dense,9000,1,0.005,False,0.004672,372
+Sparse sharing,9000,1,0.005,False,0.008396,4376
+Sparse w/ Quicksort,9000,1,0.005,False,1.346192,2284646
+Dense sharing,9000,1,0.01,False,0.35445,504620
+Dense,9000,1,0.01,False,0.00554,372
+Sparse sharing,9000,1,0.01,False,0.012442,8696
+Sparse w/ Quicksort,9000,1,0.01,False,2.672619,5637140
+Dense sharing,10000,1,0.001,False,0.226765,560636
+Dense,10000,1,0.001,False,0.003789,372
+Sparse sharing,10000,1,0.001,False,0.001875,1016
+Sparse w/ Quicksort,10000,1,0.001,False,0.370196,344167
+Dense sharing,10000,1,0.005,False,0.295136,560605
+Dense,10000,1,0.005,False,0.003581,372
+Sparse sharing,10000,1,0.005,False,0.005433,4856
+Sparse w/ Quicksort,10000,1,0.005,False,1.646402,2939613
+Dense sharing,10000,1,0.01,False,0.321464,560636
+Dense,10000,1,0.01,False,0.004046,372
+Sparse sharing,10000,1,0.01,False,0.017981,9656
+Sparse w/ Quicksort,10000,1,0.01,False,2.946335,6306066
+Dense sharing,20000,1,0.001,False,0.390331,1120617
+Dense,20000,1,0.001,False,0.005275,372
+Sparse sharing,20000,1,0.001,False,0.003157,1976
+Sparse w/ Quicksort,20000,1,0.001,False,0.646433,1003454
+Dense sharing,20000,1,0.005,False,0.434467,1120643
+Dense,20000,1,0.005,False,0.00827,372
+Sparse sharing,20000,1,0.005,False,0.010287,9656
+Sparse w/ Quicksort,20000,1,0.005,False,2.543226,5855409
+Dense sharing,20000,1,0.01,False,0.467753,1120638
+Dense,20000,1,0.01,False,0.006084,372
+Sparse sharing,20000,1,0.01,False,0.023283,19256
+Sparse w/ Quicksort,20000,1,0.01,False,6.395458,14633711
+Dense sharing,30000,1,0.001,False,0.575597,1680611
+Dense,30000,1,0.001,False,0.006997,372
+Sparse sharing,30000,1,0.001,False,0.007282,2936
+Sparse w/ Quicksort,30000,1,0.001,False,0.682607,1507759
+Dense sharing,30000,1,0.005,False,0.631261,1680624
+Dense,30000,1,0.005,False,0.007784,372
+Sparse sharing,30000,1,0.005,False,0.016771,14456
+Sparse w/ Quicksort,30000,1,0.005,False,3.721565,10390320
+Dense sharing,30000,1,0.01,False,0.583137,1680640
+Dense,30000,1,0.01,False,0.008633,372
+Sparse sharing,30000,1,0.01,False,0.047443,28856
+Sparse w/ Quicksort,30000,1,0.01,False,10.79055,25734933
+Dense sharing,40000,1,0.001,False,1.120395,2240669
+Dense,40000,1,0.001,False,0.012171,372
+Sparse sharing,40000,1,0.001,False,0.008149,3896
+Sparse w/ Quicksort,40000,1,0.001,False,1.42546,2072626
+Dense sharing,40000,1,0.005,False,0.811153,2240577
+Dense,40000,1,0.005,False,0.01655,372
+Sparse sharing,40000,1,0.005,False,0.03247,19256
+Sparse w/ Quicksort,40000,1,0.005,False,5.993054,16070883
+Dense sharing,40000,1,0.01,False,0.783529,2240599
+Dense,40000,1,0.01,False,0.012984,372
+Sparse sharing,40000,1,0.01,False,0.052989,38456
+Sparse w/ Quicksort,40000,1,0.01,False,12.543798,34365362
+Dense sharing,50000,1,0.001,False,0.950476,2800606
+Dense,50000,1,0.001,False,0.025145,372
+Sparse sharing,50000,1,0.001,False,0.009415,4856
+Sparse w/ Quicksort,50000,1,0.001,False,1.148061,2787392
+Dense sharing,50000,1,0.005,False,0.915445,2800630
+Dense,50000,1,0.005,False,0.01776,372
+Sparse sharing,50000,1,0.005,False,0.036454,24056
+Sparse w/ Quicksort,50000,1,0.005,False,7.129682,20468655
+Dense sharing,50000,1,0.01,False,0.944807,2800612
+Dense,50000,1,0.01,False,0.01668,372
+Sparse sharing,50000,1,0.01,False,0.081685,48056
+Sparse w/ Quicksort,50000,1,0.01,False,17.395509,40967341
+Dense sharing,60000,1,0.001,False,1.159347,3360656
+Dense,60000,1,0.001,False,0.016219,372
+Sparse sharing,60000,1,0.001,False,0.012238,5816
+Sparse w/ Quicksort,60000,1,0.001,False,1.395306,3443510
+Dense sharing,60000,1,0.005,False,1.134464,3360626
+Dense,60000,1,0.005,False,0.015179,372
+Sparse sharing,60000,1,0.005,False,0.038497,28856
+Sparse w/ Quicksort,60000,1,0.005,False,8.227882,24132680
+Dense sharing,60000,1,0.01,False,1.21692,3360570
+Dense,60000,1,0.01,False,0.013358,372
+Sparse sharing,60000,1,0.01,False,0.073741,57656
+Sparse w/ Quicksort,60000,1,0.01,False,20.679658,56836751
+Dense sharing,70000,1,0.001,False,1.464834,3920633
+Dense,70000,1,0.001,False,0.020474,372
+Sparse sharing,70000,1,0.001,False,0.014049,6776
+Sparse w/ Quicksort,70000,1,0.001,False,2.214398,4180809
+Dense sharing,70000,1,0.005,False,1.404006,3920577
+Dense,70000,1,0.005,False,0.024488,372
+Sparse sharing,70000,1,0.005,False,0.044981,33656
+Sparse w/ Quicksort,70000,1,0.005,False,12.303814,30154753
+Dense sharing,70000,1,0.01,False,1.54114,3920640
+Dense,70000,1,0.01,False,0.016893,372
+Sparse sharing,70000,1,0.01,False,0.160252,67256
+Sparse w/ Quicksort,70000,1,0.01,False,22.977721,61785491
+Dense sharing,80000,1,0.001,False,1.601062,4480600
+Dense,80000,1,0.001,False,0.022366,372
+Sparse sharing,80000,1,0.001,False,0.012218,7736
+Sparse w/ Quicksort,80000,1,0.001,False,1.844441,4689857
+Dense sharing,80000,1,0.005,False,1.557814,4480633
+Dense,80000,1,0.005,False,0.022596,372
+Sparse sharing,80000,1,0.005,False,0.051774,38456
+Sparse w/ Quicksort,80000,1,0.005,False,11.932074,33877878
+Dense sharing,80000,1,0.01,False,1.604676,4480601
+Dense,80000,1,0.01,False,0.022268,372
+Sparse sharing,80000,1,0.01,False,0.103004,76856
+Sparse w/ Quicksort,80000,1,0.01,False,27.300852,76781336
+Dense sharing,90000,1,0.001,False,1.804568,5040681
+Dense,90000,1,0.001,False,0.023259,372
+Sparse sharing,90000,1,0.001,False,0.013866,8696
+Sparse w/ Quicksort,90000,1,0.001,False,2.556991,6002392
+Dense sharing,90000,1,0.005,False,1.77939,5040676
+Dense,90000,1,0.005,False,0.024071,372
+Sparse sharing,90000,1,0.005,False,0.058521,43256
+Sparse w/ Quicksort,90000,1,0.005,False,13.880327,39719916
+Dense sharing,90000,1,0.01,False,1.810603,5040553
+Dense,90000,1,0.01,False,0.023463,372
+Sparse sharing,90000,1,0.01,False,0.118518,86456
+Sparse w/ Quicksort,90000,1,0.01,False,31.630232,86452362
+Dense sharing,100000,1,0.001,False,2.468596,5600664
+Dense,100000,1,0.001,False,0.027839,372
+Sparse sharing,100000,1,0.001,False,0.016489,9656
+Sparse w/ Quicksort,100000,1,0.001,False,3.096474,6243704
+Dense sharing,100000,1,0.005,False,2.393813,5600638
+Dense,100000,1,0.005,False,0.028593,372
+Sparse sharing,100000,1,0.005,False,0.084001,48056
+Sparse w/ Quicksort,100000,1,0.005,False,20.701845,51393504
+Dense sharing,100000,1,0.01,False,1.975516,5600622
+Dense,100000,1,0.01,False,0.036913,372
+Sparse sharing,100000,1,0.01,False,0.16407,96056
+Sparse w/ Quicksort,100000,1,0.01,False,34.912581,94263026
+Dense sharing,200000,1,0.001,False,4.062021,11200594
+Dense,200000,1,0.001,False,0.04872,372
+Sparse sharing,200000,1,0.001,False,0.026111,19256
+Sparse w/ Quicksort,200000,1,0.001,False,5.578186,14399912
+Dense sharing,200000,1,0.005,False,4.408984,11200579
+Dense,200000,1,0.005,False,0.047501,372
+Sparse sharing,200000,1,0.005,False,0.139416,96056
+Sparse w/ Quicksort,200000,1,0.005,False,39.437839,106446208
+Dense sharing,200000,1,0.01,False,4.187667,11200778
+Dense,200000,1,0.01,False,0.043895,372
+Sparse sharing,200000,1,0.01,False,0.301592,192056
+Sparse w/ Quicksort,200000,1,0.01,False,82.596606,209453068
+Dense sharing,300000,1,0.001,False,6.721925,16800605
+Dense,300000,1,0.001,False,0.068871,372
+Sparse sharing,300000,1,0.001,False,0.049975,28856
+Sparse w/ Quicksort,300000,1,0.001,False,9.142648,22867868
+Dense sharing,300000,1,0.005,False,5.851857,16800763
+Dense,300000,1,0.005,False,0.060961,372
+Sparse sharing,300000,1,0.005,False,0.189347,144056
+Sparse w/ Quicksort,300000,1,0.005,False,58.939213,161931046
+Dense sharing,300000,1,0.01,False,5.978389,16800557
+Dense,300000,1,0.01,False,0.067022,372
+Sparse sharing,300000,1,0.01,False,0.367943,288056
+Sparse w/ Quicksort,300000,1,0.01,False,135.753486,355112168
+Dense sharing,400000,1,0.001,False,7.95123,22400752
+Dense,400000,1,0.001,False,0.08469,372
+Sparse sharing,400000,1,0.001,False,0.06026,38456
+Sparse w/ Quicksort,400000,1,0.001,False,12.022279,31677190
+Dense sharing,400000,1,0.005,False,7.951962,22400748
+Dense,400000,1,0.005,False,0.079081,372
+Sparse sharing,400000,1,0.005,False,0.236394,192056
+Sparse w/ Quicksort,400000,1,0.005,False,83.840898,219802419
+Dense sharing,400000,1,0.01,False,8.14234,22400691
+Dense,400000,1,0.01,False,0.083405,372
+Sparse sharing,400000,1,0.01,False,0.469572,384056
+Sparse w/ Quicksort,400000,1,0.01,False,202.41483,476872602
+Dense sharing,500000,1,0.001,False,11.727244,28000558
+Dense,500000,1,0.001,False,0.128813,372
+Sparse sharing,500000,1,0.001,False,0.073031,48056
+Sparse w/ Quicksort,500000,1,0.001,False,17.158964,41418811
+Dense sharing,500000,1,0.005,False,10.438917,28000638
+Dense,500000,1,0.005,False,0.120124,372
+Sparse sharing,500000,1,0.005,False,0.396662,240056
+Sparse w/ Quicksort,500000,1,0.005,False,106.076645,263421799
+Dense sharing,500000,1,0.01,False,9.945625,28000596
+Dense,500000,1,0.01,False,0.093251,372
+Sparse sharing,500000,1,0.01,False,0.553249,480056
+Sparse w/ Quicksort,500000,1,0.01,False,262.055471,613701773
+Dense sharing,600000,1,0.001,False,12.180514,33600507
+Dense,600000,1,0.001,False,0.111088,372
+Sparse sharing,600000,1,0.001,False,0.074929,57656
+Sparse w/ Quicksort,600000,1,0.001,False,19.771991,51497778
+Dense sharing,600000,1,0.005,False,11.959142,33600725
+Dense,600000,1,0.005,False,0.120116,372
+Sparse sharing,600000,1,0.005,False,0.316455,288056
+Sparse w/ Quicksort,600000,1,0.005,False,156.221101,354800083
+Dense sharing,600000,1,0.01,False,13.084706,33600631
+Dense,600000,1,0.01,False,0.138249,372
+Sparse sharing,600000,1,0.01,False,0.696139,576056
+Sparse w/ Quicksort,600000,1,0.01,False,354.276419,700328561
+Dense sharing,700000,1,0.001,False,19.069826,39200627
+Dense,700000,1,0.001,False,0.138425,372
+Sparse sharing,700000,1,0.001,False,0.091052,67256
+Sparse w/ Quicksort,700000,1,0.001,False,31.206555,63513978
+Dense sharing,700000,1,0.005,False,18.440039,39200441
+Dense,700000,1,0.005,False,0.147512,372
+Sparse sharing,700000,1,0.005,False,0.575597,336056
+Sparse w/ Quicksort,700000,1,0.005,False,163.306343,397726021
+Dense sharing,700000,1,0.01,False,13.642557,39200549
+Dense,700000,1,0.01,False,0.13589,372
+Sparse sharing,700000,1,0.01,False,0.685132,672056
+Sparse w/ Quicksort,700000,1,0.01,False,418.332707,848825570
+Dense sharing,800000,1,0.001,False,16.337362,44800598
+Dense,800000,1,0.001,False,0.146432,372
+Sparse sharing,800000,1,0.001,False,0.093215,76856
+Sparse w/ Quicksort,800000,1,0.001,False,34.965823,83986403
+Dense sharing,800000,1,0.005,False,19.695353,44800619
+Dense,800000,1,0.005,False,0.206783,372
+Sparse sharing,800000,1,0.005,False,0.48819,384056
+Sparse w/ Quicksort,800000,1,0.005,False,223.766546,488142035
+Dense sharing,800000,1,0.01,False,17.161874,44800567
+Dense,800000,1,0.01,False,0.549328,372
+Sparse sharing,800000,1,0.01,False,1.216126,768056
+Sparse w/ Quicksort,800000,1,0.01,False,556.700429,1073204443
+Dense sharing,900000,1,0.001,False,18.547712,50400873
+Dense,900000,1,0.001,False,0.15973,372
+Sparse sharing,900000,1,0.001,False,0.126083,86456
+Sparse w/ Quicksort,900000,1,0.001,False,39.509536,84195874
+Dense sharing,900000,1,0.005,False,19.328312,50400751
+Dense,900000,1,0.005,False,0.160063,372
+Sparse sharing,900000,1,0.005,False,0.523418,432056
+Sparse w/ Quicksort,900000,1,0.005,False,261.739153,583052728
+Dense sharing,900000,1,0.01,False,18.927083,50400505
+Dense,900000,1,0.01,False,0.174512,372
+Sparse sharing,900000,1,0.01,False,0.89867,864056
+Sparse w/ Quicksort,900000,1,0.01,False,716.29318,1166867287
