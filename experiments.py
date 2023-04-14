@@ -297,7 +297,7 @@ async def main():
             await benchmark_dot_product(exp_env, n_dim=j * 10**i, density=density)
 
     async with ExperimentalEnvironment("mat_mult.csv", CSV_FIELDS) as exp_env:
-        for i, j, density in product(range(2, 4), range(1, 10), [0.001, 0.005, 0.01]):
+        for i, j, density in product(range(2, 4), range(1, 10, 2), [0.001]):
             await benchmark_sparse_sparse_mat_mult(
                 exp_env, n_dim=10**2, m_dim=j * 10**i, density=density
             )

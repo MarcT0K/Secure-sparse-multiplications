@@ -23,7 +23,7 @@ plt.rc(
 plt.rcParams.update(params)
 
 
-def plot_sharing_experiment(csv_name):
+def plot_sharing_experiment(csv_name, rows_or_col, xlabel):
     df = pd.read_csv(csv_name + ".csv")
     dense_sharing = df[(df["Algorithm"] == "Dense sharing") & (df["Density"] == 0.001)]
     sparse_sharing_01 = df[
@@ -39,21 +39,23 @@ def plot_sharing_experiment(csv_name):
     def figure_per_col(col, unit, log_scale_x, log_scale_y):
         fig, ax = plt.subplots()
 
-        ax.plot(dense_sharing["Nb. rows"], dense_sharing[col], label="Dense")
+        ax.plot(dense_sharing[f"Nb. {rows_or_col}"], dense_sharing[col], label="Dense")
         ax.plot(
-            sparse_sharing_01["Nb. rows"],
+            sparse_sharing_01[f"Nb. {rows_or_col}"],
             sparse_sharing_01[col],
             label=r"Sparse (99.9\%)",
         )
         ax.plot(
-            sparse_sharing_05["Nb. rows"],
+            sparse_sharing_05[f"Nb. {rows_or_col}"],
             sparse_sharing_05[col],
             label=r"Sparse (99.5\%)",
         )
         ax.plot(
-            sparse_sharing_1["Nb. rows"], sparse_sharing_1[col], label=r"Sparse (99\%)"
+            sparse_sharing_1[f"Nb. {rows_or_col}"],
+            sparse_sharing_1[col],
+            label=r"Sparse (99\%)",
         )
-        ax.set(xlabel="Vector length", ylabel=f"{col} ({unit})")
+        ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
         ax.legend()
         if log_scale_y:
             ax.set_yscale("log")
@@ -80,7 +82,7 @@ def plot_sharing_experiment(csv_name):
         figure_per_col("Communication cost", "bytes", b1, b2)
 
 
-def plot_mult_experiment(csv_name):
+def plot_mult_experiment(csv_name, rows_or_col, xlabel):
     df = pd.read_csv(csv_name + ".csv")
     dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.001)]
     sparse_mult_01 = df[
@@ -96,19 +98,23 @@ def plot_mult_experiment(csv_name):
     def figure_per_col(col, unit, log_scale_x, log_scale_y):
         fig, ax = plt.subplots()
 
-        ax.plot(dense_mult["Nb. rows"], dense_mult[col], label="Dense")
+        ax.plot(dense_mult[f"Nb. {rows_or_col}"], dense_mult[col], label="Dense")
         ax.plot(
-            sparse_mult_01["Nb. rows"],
+            sparse_mult_01[f"Nb. {rows_or_col}"],
             sparse_mult_01[col],
             label=r"Sparse (99.9\%)",
         )
         ax.plot(
-            sparse_mult_05["Nb. rows"],
+            sparse_mult_05[f"Nb. {rows_or_col}"],
             sparse_mult_05[col],
             label=r"Sparse (99.5\%)",
         )
-        ax.plot(sparse_mult_1["Nb. rows"], sparse_mult_1[col], label=r"Sparse (99\%)")
-        ax.set(xlabel="Vector length", ylabel=f"{col} ({unit})")
+        ax.plot(
+            sparse_mult_1[f"Nb. {rows_or_col}"],
+            sparse_mult_1[col],
+            label=r"Sparse (99\%)",
+        )
+        ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
         ax.legend()
         if log_scale_y:
             ax.set_yscale("log")
@@ -134,7 +140,7 @@ def plot_mult_experiment(csv_name):
         figure_per_col("Communication cost", "bytes", b1, b2)
 
 
-def plot_mult_and_sharing_experiment(csv_name):
+def plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel):
     df = pd.read_csv(csv_name + ".csv")
     dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.001)]
     sparse_mult_01 = df[
@@ -162,26 +168,26 @@ def plot_mult_and_sharing_experiment(csv_name):
         fig, ax = plt.subplots()
 
         ax.plot(
-            dense_mult["Nb. rows"],
+            dense_mult[f"Nb. {rows_or_col}"],
             dense_mult[col].to_numpy() + dense_sharing[col].to_numpy(),
             label="Dense",
         )
         ax.plot(
-            sparse_mult_01["Nb. rows"],
+            sparse_mult_01[f"Nb. {rows_or_col}"],
             sparse_mult_01[col].to_numpy() + sparse_sharing_01[col].to_numpy(),
             label=r"Sparse (99.9\%)",
         )
         ax.plot(
-            sparse_mult_05["Nb. rows"],
+            sparse_mult_05[f"Nb. {rows_or_col}"],
             sparse_mult_05[col].to_numpy() + sparse_sharing_05[col].to_numpy(),
             label=r"Sparse (99.5\%)",
         )
         ax.plot(
-            sparse_mult_1["Nb. rows"],
+            sparse_mult_1[f"Nb. {rows_or_col}"],
             sparse_mult_1[col].to_numpy() + sparse_sharing_1[col].to_numpy(),
             label=r"Sparse (99\%)",
         )
-        ax.set(xlabel="Vector length", ylabel=f"{col} ({unit})")
+        ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
         ax.legend()
         if log_scale_y:
             ax.set_yscale("log")
@@ -207,13 +213,13 @@ def plot_mult_and_sharing_experiment(csv_name):
         figure_per_col("Communication cost", "bytes", b1, b2)
 
 
-def gen_all_figures(csv_name):
-    plot_sharing_experiment(csv_name)
-    plot_mult_experiment(csv_name)
-    plot_mult_and_sharing_experiment(csv_name)
+def gen_all_figures(csv_name, rows_or_col, xlabel):
+    plot_sharing_experiment(csv_name, rows_or_col, xlabel)
+    plot_mult_experiment(csv_name, rows_or_col, xlabel)
+    plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel)
 
 
 if __name__ == "__main__":
-    gen_all_figures("dot_product")
-    gen_all_figures("mat_mult")
+    gen_all_figures("dot_product", "rows", "Vector length")
+    gen_all_figures("mat_mult", "columns", "Number of columns")
     plt.close("all")
