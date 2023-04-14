@@ -64,10 +64,7 @@ class ExperimentalEnvironment:
         )
 
     async def start(self):
-        global active_exp_env
-        if active_exp_env is not None:
-            raise ValueError("There is already an ongoing experiment")
-        active_exp_env = self
+        await mpc.start()
 
         with open("/proc/meminfo", "r") as mem:  # We estimate the free memory
             free_memory = 0
@@ -80,8 +77,6 @@ class ExperimentalEnvironment:
             resource.RLIMIT_AS,
             (int(free_memory * 1024 * 0.9 / len(mpc.parties)), self.prev_hard),
         )
-
-        await mpc.start()
 
     @asynccontextmanager
     async def benchmark(self, parameters):
@@ -106,26 +101,22 @@ class ExperimentalEnvironment:
             self._file.flush()
         print(f"Algorithm {parameters['Algorithm']} DONE")
 
-    async def shutdown(self):
+    async def end(self):
         await mpc.shutdown()
-        self._file.close()
-        resource.setrlimit(resource.RLIMIT_AS, (self.prev_soft, self.prev_hard))
 
-        global active_exp_env
-        active_exp_env = None
+        if mpc.pid == 0:
+            self._file.close()
+        resource.setrlimit(resource.RLIMIT_AS, (self.prev_soft, self.prev_hard))
 
     async def __aenter__(self):
         await self.start()
         return self
 
     async def __aexit__(self, *_args):
-        await self.shutdown()
+        await self.end()
 
 
-active_exp_env: Optional[ExperimentalEnvironment] = None
-
-
-async def benchmark_dot_product(n_dim=10**5, density=0.001):
+async def benchmark_dot_product(exp_env, n_dim=10**5, density=0.001):
     print("Sparse dot benchmark: n=", n_dim, " density=", density)
     secint = mpc.SecInt(64)
 
@@ -154,7 +145,7 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
         "Nb. columns": 1,
         "Density": density,
     }
-    async with active_exp_env.benchmark(params):
+    async with exp_env.benchmark(params):
         sec_dense_x = DenseVectorNumpy(dense_x.transpose(), sectype=secint)
         sec_dense_y = DenseVectorNumpy(dense_y, sectype=secint)
 
@@ -165,7 +156,7 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
             "Nb. columns": 1,
             "Density": density,
         }
-        async with active_exp_env.benchmark(params):
+        async with exp_env.benchmark(params):
             z = sec_dense_x.dot(sec_dense_y)
             assert await mpc.output(z) == real_res
 
@@ -177,7 +168,7 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
     #     "Nb. columns": 1,
     #     "Density": density,
     # }
-    # async with active_exp_env.benchmark(params):
+    # async with exp_env.benchmark(params):
     #     sec_x = SparseVectorNumpy(x_sparse, secint)
     #     sec_y = SparseVectorNumpy(y_sparse, secint)
 
@@ -188,7 +179,7 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
     #     "Density": density,
     # }
     # for i in range(1):
-    #     async with active_exp_env.benchmark(params):
+    #     async with exp_env.benchmark(params):
     #         z = sec_x.dot(sec_y)
     #         assert await mpc.output(z) == real_res
 
@@ -216,7 +207,7 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
         "Nb. columns": 1,
         "Density": density,
     }
-    async with active_exp_env.benchmark(params):
+    async with exp_env.benchmark(params):
         sec_x = SparseVectorParallelQuicksort(x_sparse, secint)
         sec_y = SparseVectorParallelQuicksort(y_sparse, secint)
 
@@ -227,14 +218,16 @@ async def benchmark_dot_product(n_dim=10**5, density=0.001):
         "Density": density,
     }
     for i in range(1):
-        async with active_exp_env.benchmark(params):
+        async with exp_env.benchmark(params):
             z = await sec_x.dot(sec_y)
             assert await mpc.output(z) == real_res
 
     print("=== END")
 
 
-async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, density=0.001):
+async def benchmark_sparse_sparse_mat_mult(
+    exp_env, n_dim=1000, m_dim=10**5, density=0.001
+):
     secint = mpc.SecInt(64)
     print(
         f"Started experiment with sparse matrix multiplication ({n_dim}x{m_dim}), density={density}"
@@ -255,7 +248,7 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, density=0.00
         "Nb. columns": m_dim,
         "Density": density,
     }
-    async with active_exp_env.benchmark(params):
+    async with exp_env.benchmark(params):
         sec_dense_t = DenseMatrixNumpy(dense_mat.transpose(), sectype=secint)
         sec_dense = DenseMatrixNumpy(dense_mat, sectype=secint)
     del dense_mat
@@ -266,7 +259,7 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, density=0.00
         "Nb. columns": m_dim,
         "Density": density,
     }
-    async with active_exp_env.benchmark(params):
+    async with exp_env.benchmark(params):
         z = sec_dense_t.dot(sec_dense)
         assert z._mat.shape == (m_dim, m_dim)
 
@@ -276,7 +269,7 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, density=0.00
         "Nb. columns": m_dim,
         "Density": density,
     }
-    async with active_exp_env.benchmark(params):
+    async with exp_env.benchmark(params):
         sec_x = SparseMatrixColumnNumpy(x_sparse.transpose(), secint)
         sec_y = SparseMatrixRowNumpy(x_sparse, secint)
 
@@ -286,20 +279,22 @@ async def benchmark_sparse_sparse_mat_mult(n_dim=1000, m_dim=10**5, density=0.00
         "Nb. columns": m_dim,
         "Density": density,
     }
-    async with active_exp_env.benchmark(params):
+    async with exp_env.benchmark(params):
         z = await sec_x.dot(sec_y)
 
     print("=== END")
 
 
 async def main():
-    async with ExperimentalEnvironment("dot_product.csv", CSV_FIELDS):
+    async with ExperimentalEnvironment("dot_product.csv", CSV_FIELDS) as exp_env:
         for i, j, density in product(range(3, 6), range(1, 10), [0.001, 0.005, 0.01]):
-            await benchmark_dot_product(n_dim=j * 10**i, density=density)
+            await benchmark_dot_product(exp_env, n_dim=j * 10**i, density=density)
 
-    async with ExperimentalEnvironment("mat_mult.csv", CSV_FIELDS):
+    async with ExperimentalEnvironment("mat_mult.csv", CSV_FIELDS) as exp_env:
         for i, j, density in product(range(2, 4), range(1, 10), [0.001, 0.005, 0.01]):
-            await benchmark_sparse_sparse_mat_mult(m_dim=j * 10**i, density=density)
+            await benchmark_sparse_sparse_mat_mult(
+                exp_env, n_dim=10**2, m_dim=j * 10**i, density=density
+            )
 
 
 if __name__ == "__main__":
