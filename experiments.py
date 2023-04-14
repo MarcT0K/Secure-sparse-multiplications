@@ -262,6 +262,10 @@ async def benchmark_sparse_sparse_mat_mult(
     async with exp_env.benchmark(params):
         z = sec_dense_t.dot(sec_dense)
         assert z._mat.shape == (m_dim, m_dim)
+    z_clear = await mpc.output(z._mat)
+    nb_non_zeros = (z_clear != 0).sum()
+
+    del sec_dense_t, sec_dense, z, z_clear
 
     params = {
         "Algorithm": "Sparse sharing",
@@ -282,6 +286,8 @@ async def benchmark_sparse_sparse_mat_mult(
     async with exp_env.benchmark(params):
         z = await sec_x.dot(sec_y)
 
+    nb_non_zeros2 = len(z._mat)
+    assert nb_non_zeros == nb_non_zeros2  #
     print("=== END")
 
 

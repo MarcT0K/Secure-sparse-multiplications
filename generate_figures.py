@@ -23,8 +23,8 @@ plt.rc(
 plt.rcParams.update(params)
 
 
-def plot_sharing_experiment():
-    df = pd.read_csv("dot_product.csv")
+def plot_sharing_experiment(csv_name):
+    df = pd.read_csv(csv_name + ".csv")
     dense_sharing = df[(df["Algorithm"] == "Dense sharing") & (df["Density"] == 0.001)]
     sparse_sharing_01 = df[
         (df["Algorithm"] == "Sparse sharing") & (df["Density"] == 0.001)
@@ -67,7 +67,7 @@ def plot_sharing_experiment():
 
         fig.tight_layout()
         fig.savefig(
-            f"sharing_{col.lower().replace(' ', '_')}_{'log' if log_scale_x else 'lin'}_{'log' if log_scale_y else 'lin'}.png",
+            f"{csv_name}_sharing_{col.lower().replace(' ', '_')}_{'log' if log_scale_x else 'lin'}_{'log' if log_scale_y else 'lin'}.png",
             dpi=400,
         )
 
@@ -80,8 +80,8 @@ def plot_sharing_experiment():
         figure_per_col("Communication cost", "bytes", b1, b2)
 
 
-def plot_mult_experiment():
-    df = pd.read_csv("dot_product.csv")
+def plot_mult_experiment(csv_name):
+    df = pd.read_csv(csv_name + ".csv")
     dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.001)]
     sparse_mult_01 = df[
         (df["Algorithm"] == "Sparse w/ Quicksort") & (df["Density"] == 0.001)
@@ -122,7 +122,7 @@ def plot_mult_experiment():
 
         fig.tight_layout()
         fig.savefig(
-            f"mult_{col.lower().replace(' ', '_')}_{'log' if log_scale_x else 'lin'}_{'log' if log_scale_y else 'lin'}.png",
+            f"{csv_name}_mult_{col.lower().replace(' ', '_')}_{'log' if log_scale_x else 'lin'}_{'log' if log_scale_y else 'lin'}.png",
             dpi=400,
         )
         plt.close(fig)
@@ -134,8 +134,8 @@ def plot_mult_experiment():
         figure_per_col("Communication cost", "bytes", b1, b2)
 
 
-def plot_mult_and_sharing_experiment():
-    df = pd.read_csv("dot_product.csv")
+def plot_mult_and_sharing_experiment(csv_name):
+    df = pd.read_csv(csv_name + ".csv")
     dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.001)]
     sparse_mult_01 = df[
         (df["Algorithm"] == "Sparse w/ Quicksort") & (df["Density"] == 0.001)
@@ -195,7 +195,7 @@ def plot_mult_and_sharing_experiment():
 
         fig.tight_layout()
         fig.savefig(
-            f"mult_and_sharing_{col.lower().replace(' ', '_')}_{'log' if log_scale_x else 'lin'}_{'log' if log_scale_y else 'lin'}.png",
+            f"{csv_name}_mult_and_sharing_{col.lower().replace(' ', '_')}_{'log' if log_scale_x else 'lin'}_{'log' if log_scale_y else 'lin'}.png",
             dpi=400,
         )
         plt.close(fig)
@@ -207,7 +207,13 @@ def plot_mult_and_sharing_experiment():
         figure_per_col("Communication cost", "bytes", b1, b2)
 
 
+def gen_all_figures(csv_name):
+    plot_sharing_experiment(csv_name)
+    plot_mult_experiment(csv_name)
+    plot_mult_and_sharing_experiment(csv_name)
+
+
 if __name__ == "__main__":
-    plot_sharing_experiment()
-    plot_mult_experiment()
-    plot_mult_and_sharing_experiment()
+    gen_all_figures("dot_product")
+    gen_all_figures("mat_mult")
+    plt.close("all")
