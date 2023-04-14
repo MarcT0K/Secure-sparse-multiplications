@@ -73,7 +73,8 @@ class ExperimentalEnvironment:
                 if str(sline[0]) in ("MemFree:", "Buffers:", "Cached:"):
                     free_memory += int(sline[1])
 
-        resource.setrlimit(  # We limite the memory usage to prevent memory overflow from crashing the PC
+        resource.setrlimit(
+            # We limit the memory usage to prevent memory overflow from crashing the PC
             resource.RLIMIT_AS,
             (int(free_memory * 1024 * 0.9 / len(mpc.parties)), self.prev_hard),
         )
@@ -149,16 +150,10 @@ async def benchmark_dot_product(exp_env, n_dim=10**5, density=0.001):
         sec_dense_x = DenseVectorNumpy(dense_x.transpose(), sectype=secint)
         sec_dense_y = DenseVectorNumpy(dense_y, sectype=secint)
 
-    for i in range(1):
-        params = {
-            "Algorithm": "Dense",
-            "Nb. rows": n_dim,
-            "Nb. columns": 1,
-            "Density": density,
-        }
-        async with exp_env.benchmark(params):
-            z = sec_dense_x.dot(sec_dense_y)
-            assert await mpc.output(z) == real_res
+    params["Algorithm"] = "Dense"
+    async with exp_env.benchmark(params):
+        z = sec_dense_x.dot(sec_dense_y)
+        assert await mpc.output(z) == real_res
 
     del dense_x, dense_y
 
@@ -201,26 +196,15 @@ async def benchmark_dot_product(exp_env, n_dim=10**5, density=0.001):
     # delta_sparse = end - start
     # print("Time for sparse psi optimized:", delta_sparse.total_seconds())
 
-    params = {
-        "Algorithm": "Sparse sharing",
-        "Nb. rows": n_dim,
-        "Nb. columns": 1,
-        "Density": density,
-    }
+    params["Algorithm"] = "Sparse sharing"
     async with exp_env.benchmark(params):
         sec_x = SparseVectorParallelQuicksort(x_sparse, secint)
         sec_y = SparseVectorParallelQuicksort(y_sparse, secint)
 
-    params = {
-        "Algorithm": "Sparse w/ Quicksort",
-        "Nb. rows": n_dim,
-        "Nb. columns": 1,
-        "Density": density,
-    }
-    for i in range(1):
-        async with exp_env.benchmark(params):
-            z = await sec_x.dot(sec_y)
-            assert await mpc.output(z) == real_res
+    params["Algorithm"] = "Sparse w/ Quicksort"
+    async with exp_env.benchmark(params):
+        z = await sec_x.dot(sec_y)
+        assert await mpc.output(z) == real_res
 
     print("=== END")
 
@@ -253,12 +237,7 @@ async def benchmark_sparse_sparse_mat_mult(
         sec_dense = DenseMatrixNumpy(dense_mat, sectype=secint)
     del dense_mat
 
-    params = {
-        "Algorithm": "Dense",
-        "Nb. rows": n_dim,
-        "Nb. columns": m_dim,
-        "Density": density,
-    }
+    params["Algorithm"] = "Dense"
     async with exp_env.benchmark(params):
         z = sec_dense_t.dot(sec_dense)
         assert z._mat.shape == (m_dim, m_dim)
@@ -267,22 +246,12 @@ async def benchmark_sparse_sparse_mat_mult(
 
     del sec_dense_t, sec_dense, z, z_clear
 
-    params = {
-        "Algorithm": "Sparse sharing",
-        "Nb. rows": n_dim,
-        "Nb. columns": m_dim,
-        "Density": density,
-    }
+    params["Algorithm"] = "Sparse sharing"
     async with exp_env.benchmark(params):
         sec_x = SparseMatrixColumnNumpy(x_sparse.transpose(), secint)
         sec_y = SparseMatrixRowNumpy(x_sparse, secint)
 
-    params = {
-        "Algorithm": "Sparse w/ Quicksort",
-        "Nb. rows": n_dim,
-        "Nb. columns": m_dim,
-        "Density": density,
-    }
+    params["Algorithm"] = "Sparse w/ Quicksort"
     async with exp_env.benchmark(params):
         z = await sec_x.dot(sec_y)
 
@@ -297,7 +266,9 @@ async def main():
             await benchmark_dot_product(exp_env, n_dim=j * 10**i, density=density)
 
     async with ExperimentalEnvironment("mat_mult.csv", CSV_FIELDS) as exp_env:
-        for i, j, density in product(range(2, 4), range(1, 10, 2), [0.001]):
+        for i, j, density in product(
+            range(2, 4), range(1, 10, 2), [0.001, 0.005, 0.01]
+        ):
             await benchmark_sparse_sparse_mat_mult(
                 exp_env, n_dim=10**2, m_dim=j * 10**i, density=density
             )
