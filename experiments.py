@@ -299,7 +299,7 @@ async def main():
         for (
             i,
             j,
-        ) in product(range(1, 6), range(1, 10)):
+        ) in product(range(1, 4), range(1, 10)):
             await benchmark_oblivious_shuffle(exp_env, n_dim=j * 10**i)
 
     async with ExperimentalEnvironment("dot_product.csv", CSV_FIELDS) as exp_env:
