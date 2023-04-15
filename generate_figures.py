@@ -219,7 +219,48 @@ def gen_all_figures(csv_name, rows_or_col, xlabel):
     plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel)
 
 
+def generate_shuffle_experiment():
+    df = pd.read_csv("shuffle.csv")
+    mpyc_shuffle = df[(df["Algorithm"] == "MPyC shuffle")]
+    laur_shuffle = df[(df["Algorithm"] == "3PC shuffle")]
+
+    def figure_per_col(col, unit, log_scale_x, log_scale_y):
+        fig, ax = plt.subplots()
+
+        ax.plot(mpyc_shuffle["Nb. rows"], mpyc_shuffle[col], label="MPyC shuffle")
+        ax.plot(
+            laur_shuffle["Nb. rows"],
+            laur_shuffle[col],
+            label="Laur et al. shuffle",
+        )
+        ax.set(xlabel="List length", ylabel=f"{col} ({unit})")
+        ax.legend()
+        if log_scale_y:
+            ax.set_yscale("log")
+        else:
+            ax.set_yscale("linear")
+
+        if log_scale_x:
+            ax.set_xscale("log")
+        else:
+            ax.set_xscale("linear")
+
+        fig.tight_layout()
+        fig.savefig(
+            f"shuffle_{col.lower().replace(' ', '_')}_{'log' if log_scale_x else 'lin'}_{'log' if log_scale_y else 'lin'}.png",
+            dpi=400,
+        )
+        plt.close(fig)
+
+    for b1, b2 in [(i, j) for i in [True, False] for j in [True, False]]:
+        figure_per_col("Runtime", "s", b1, b2)
+
+    for b1, b2 in [(i, j) for i in [True, False] for j in [True, False]]:
+        figure_per_col("Communication cost", "bytes", b1, b2)
+
+
 if __name__ == "__main__":
+    generate_shuffle_experiment()
     gen_all_figures("dot_product", "rows", "Vector length")
     gen_all_figures("mat_mult", "columns", "Number of columns")
     plt.close("all")

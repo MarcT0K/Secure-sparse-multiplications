@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from csv import DictWriter
 from datetime import datetime
-from typing import Optional
+from random import randint
 from itertools import product
 
 import resource
@@ -33,6 +33,9 @@ from vectors import (
     SparseVectorParallelQuicksort,
     SparseVectorQuicksort,
 )
+
+from resharing import np_shuffle_3PC
+from shuffle import np_shuffle
 
 CSV_FIELDS = [
     "Algorithm",
@@ -260,7 +263,45 @@ async def benchmark_sparse_sparse_mat_mult(
     print("=== END")
 
 
+async def benchmark_oblivious_shuffle(exp_env, n_dim):
+    secint = mpc.SecInt(64)
+    if mpc.pid == 0:
+        rand_list = [randint(0, 2**62) for _ in range(n_dim)]
+    else:
+        rand_list = [0] * n_dim
+
+    rand_list = mpc.np_fromlist([mpc.input(secint(i), senders=0) for i in rand_list])
+    init_list = await mpc.output(rand_list)
+
+    params = {
+        "Algorithm": "MPyC shuffle",
+        "Nb. rows": n_dim,
+    }
+    async with exp_env.benchmark(params):
+        z = await np_shuffle(secint, rand_list)
+        new_list = await mpc.output(z)
+        assert (new_list != init_list).any()
+        assert set(new_list) == set(init_list)
+
+    params = {
+        "Algorithm": "3PC shuffle",
+        "Nb. rows": n_dim,
+    }
+    async with exp_env.benchmark(params):
+        await np_shuffle_3PC(rand_list)
+        new_list = await mpc.output(z)
+        assert (new_list != init_list).any()
+        assert set(new_list) == set(init_list)
+
+
 async def main():
+    async with ExperimentalEnvironment("shuffle.csv", CSV_FIELDS) as exp_env:
+        for (
+            i,
+            j,
+        ) in product(range(1, 6), range(1, 10)):
+            await benchmark_oblivious_shuffle(exp_env, n_dim=j * 10**i)
+
     async with ExperimentalEnvironment("dot_product.csv", CSV_FIELDS) as exp_env:
         for i, j, density in product(range(3, 6), range(1, 10), [0.001, 0.005, 0.01]):
             await benchmark_dot_product(exp_env, n_dim=j * 10**i, density=density)
