@@ -124,16 +124,18 @@ async def parallel_quicksort(sec_arr, sectype, key=None, max_key_val=10**6):
 
 async def test():
     await mpc.start()
-    sectype = mpc.SecInt(32)
+    n_col = 1
+    sectype = mpc.SecInt(64)
     if mpc.pid == 0:
-        rand_list = [random.randint(0, 1024) for _ in range(10)]
+        rand_list = [random.randint(0, 1024) for _ in range(n_col * 1000)]
     else:
         rand_list = []
 
     rand_list = await mpc.transfer(rand_list, senders=0)
 
     l = mpc.np_reshape(
-        mpc.np_fromlist([sectype(i) for i in rand_list]), (len(rand_list) // 2, 2)
+        mpc.np_fromlist([sectype(i) for i in rand_list]),
+        (len(rand_list) // n_col, n_col),
     )
     print("Initial:", await mpc.output(l))
     l_p = await parallel_quicksort(l, sectype, key=lambda tup: tup[0])
