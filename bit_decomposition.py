@@ -15,16 +15,16 @@ def np_add_bits(x_in, y_in):
     def f(i, j, high=False):
         n = j - i
         if n == 1:
-            c[i] = x[i] * y[i]
+            c[i, :] = x[i, :] * y[i, :]
             if high:
-                d[i] = x[i] + y[i] - c[i] * 2
+                d[i, :] = x[i, :] + y[i, :] - c[i, :] * 2
         else:
             h = i + n // 2
             f(i, h, high=high)
             f(h, j, high=True)
-            c[h:j] = c[h:j] + c[h - 1] * d[h:j, :]
+            c[h:j, :] = c[h:j, :] + c[h - 1, :] * d[h:j, :]
             if high:
-                d[h:j] = d[h:j] * d[h - 1, :]
+                d[h:j, :] = d[h:j, :] * d[h - 1, :]
 
     n, m = x.shape
     c = np.array([[None] * m] * n)
@@ -33,7 +33,7 @@ def np_add_bits(x_in, y_in):
         f(0, n)
     # c = prefix carries for addition of x and y
     for i in range(n - 1, -1, -1):
-        c[i] = x[i] + y[i] - c[i] * 2 + (c[i - 1] if i > 0 else 0)
+        c[i, :] = x[i, :] + y[i, :] - c[i, :] * 2 + (c[i - 1, :] if i > 0 else 0)
 
     c = np.transpose(c)
     return c
@@ -61,6 +61,7 @@ async def np_to_bits(a, l=None):
         l -= f
 
     r_bits = await mpc.np_random_bits(field, n * l)
+    print("bits:", await mpc.output(r_bits))
     r_bits = r_bits.reshape(shape)
     shifts = np.arange(l)
     r_modl = np.sum(r_bits.value << shifts, axis=a.ndim)
@@ -88,10 +89,12 @@ async def np_to_bits(a, l=None):
     if rshift_f:
         a = a >> f
     c = await mpc.output(a + ((1 << stype.bit_length) + (r_divl << l) - r_modl))
-    c = np.vectorize(int, otypes="O")(c.value % (1 << l))
+    c = c.value % (1 << l)
     c_bits = np.right_shift.outer(c, shifts) & 1
     c_bits = c_bits.reshape(shape)
-    r_bits = r_bits.value  # TODO: drop .value, fix secfxp(r) if r field elt
+    r_bits = stype.array(
+        r_bits.value
+    )  # TODO: drop .value, fix secfxp(r) if r field elt
     a_bits = np_add_bits(r_bits, c_bits)
     if rshift_f:
         a_bits = [field(0) for _ in range(f)] + a_bits
@@ -107,6 +110,7 @@ async def main():
     y = np_to_bits(c, 5)
     print(type(y), y.shape)
     print(await mpc.output(y))
+    # z = [mpc.to_bits(i) for i in c]
     await mpc.shutdown()
 
 
