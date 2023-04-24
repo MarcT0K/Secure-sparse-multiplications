@@ -47,16 +47,17 @@ async def reveal_sort(keys, data, sectype):
         )
 
     if len(mpc.parties) != 3:
-        merged = await np_shuffle(sectype, merged)
+        np_shuffle(merged)
     else:
         merged = await np_shuffle_3PC(merged)
 
     plaintext_keys = await mpc.output(merged[:, 0])
 
+    # NB: In the radix sort, the plaintext keys are already the indices
     sorted_indices = [i for i in plaintext_keys]
 
     sorted_data = mpc.np_copy(merged)
-    mpc.np_update(sorted_data, sorted_indices, merged)
+    sorted_data = mpc.np_update(sorted_data, sorted_indices, merged)
     return sorted_data[:, 1:]  # remove the plaintext key
 
 
@@ -96,8 +97,12 @@ async def radix_sort(
         else:
             res = await reveal_sort(cp_j, data, sectype)
 
+    if already_decomposed:
+        res = res[:, key_bitlength:]
+
     if desc:  # Descending order
         return res
+
     return res[::-1, :]
 
 
@@ -105,7 +110,7 @@ async def main():
     await mpc.start()
     sectype = mpc.SecInt(64)
     if mpc.pid == 0:
-        rand_list = [random.randint(0, 1024**3) for _ in range(1000)]
+        rand_list = [random.randint(0, 10**5) for _ in range(1000)]
     else:
         rand_list = []
 

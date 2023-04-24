@@ -140,7 +140,7 @@ def np_permute(input_list, seed, axis, inv=False):
         permutation = inv
 
     res = mpc.np_copy(input_list)
-    mpc.np_update(res, permutation, input_list)
+    res = mpc.np_update(res, permutation, input_list)
     return res
 
 

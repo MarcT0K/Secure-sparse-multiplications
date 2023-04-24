@@ -2,21 +2,29 @@ import datetime
 import random
 
 from mpyc.random import shuffle
-from mpyc.runtime import mpc
+from mpyc.runtime import mpc, Future, mpc_coro
 
 
+@mpc_coro
 async def np_random_unit_vector(sectype, n):
     """Uniformly random secret rotation of [1] + [0]*(n-1).
 
     Expected number of secret random bits needed is ceil(log_2 n) + c,
     with c a small constant, c < 3.
     """
+
+    if issubclass(sectype, mpc.SecureObject):
+        await mpc.returnType((sectype.array, True, (n,)))
+    else:
+        await mpc.returnType(Future)
+
     if n == 1:
         return mpc.np_fromlist([sectype(1)])
 
     b = n - 1
     k = b.bit_length()
     x = mpc.np_random_bits(sectype, k)
+
     i = k - 1
     u = mpc.np_fromlist([x[i], 1 - x[i]])
     while i:
@@ -27,7 +35,7 @@ async def np_random_unit_vector(sectype, n):
             u = v
         elif await mpc.output(u[0] * x[i]):  # TODO: mul_public
             # restart, keeping unused secret random bits x[:i]
-            x = mpc.np_hstack((x[:i], await np_random_unit_vector(sectype, k - i)))
+            x = mpc.np_hstack((x[:i], np_random_unit_vector(sectype, k - i)))
             i = k - 1
             u = mpc.np_fromlist([x[i], 1 - x[i]])
         else:
@@ -37,16 +45,27 @@ async def np_random_unit_vector(sectype, n):
     return u
 
 
-async def np_shuffle(sectype, x):
-    """Shuffle list x secretly in-place, and return None.
+def np_shuffle(a, axis=None):
+    """Shuffle numpy-like array x secretly in-place, and return None.
 
-    Given list x may contain public or secret elements.
-    Elements of x are all numbers or all lists (of the same length) of numbers.
+    Given array x may contain public or secret elements.
     """
+    sectype = type(a).sectype
+    if axis is None:
+        axis = 0
+
+    if axis >= len(a.shape):
+        raise ValueError("Invalid axis")
+
+    x = mpc.np_copy(a)
+
+    if axis != 0:
+        x = mpc.np_swapaxes(x, 0, axis)
+
     n = x.shape[0]
 
     for i in range(n - 1):
-        u = mpc.np_transpose(await np_random_unit_vector(sectype, n - i))
+        u = mpc.np_transpose(np_random_unit_vector(sectype, n - i))
         x_u = mpc.np_matmul(u, x[i:])
         if len(x.shape) > 1:
             d = mpc.np_outer(u, (x[i] - x_u))
@@ -54,9 +73,12 @@ async def np_shuffle(sectype, x):
         else:
             d = u * (x[i] - x_u)
             x = mpc.np_hstack((x[:i, ...], mpc.np_add(x[i:, ...], d)))
-        mpc.np_update(x, i, x_u)
+        x = mpc.np_update(x, i, x_u)
 
-    return x
+    if axis != 0:
+        x = mpc.np_swapaxes(x, 0, axis)
+
+    mpc.np_update(a, range(a.shape[0]), x)
 
 
 async def shuffle_3pc(sectype, x):
@@ -67,31 +89,33 @@ async def test():
     await mpc.start()
     sectype = mpc.SecInt(64)
     if mpc.pid == 0:
-        l = [[sectype(i), sectype(random.randint(0, 1024))] for i in range(1000)]
+        # l = [[sectype(i), sectype(random.randint(0, 1024))] for i in range(1000)]
+        l = [sectype(i) for i in range(1000)]
     else:
         l = None
     l = await mpc.transfer(l, senders=0)
 
-    l_arr = []
-    for tup in l:
-        l_arr += tup
-    l_arr = mpc.np_reshape(mpc.np_fromlist(l_arr), (len(l), len(l[0])))
+    # l_arr = []
+    # for tup in l:
+    #     l_arr += tup
+    # l_arr = mpc.np_reshape(mpc.np_fromlist(l_arr), (len(l), len(l[0])))
+    l_arr = mpc.np_fromlist(l)
 
     print(await mpc.output(l_arr))
     start = datetime.datetime.now()
-    x = await np_shuffle(sectype, l_arr)
-    print(await mpc.output(x))
+    np_shuffle(l_arr, axis=0)
+    print("l_arr:", await mpc.output(l_arr))
     delta_np = datetime.datetime.now() - start
 
-    start = datetime.datetime.now()
-    shuffle(sectype, l)
-    print("[")
-    for i in range(len(l)):
-        print(await mpc.output(l[i]), end=", ")
-    print("]")
-    delta = datetime.datetime.now() - start
+    # start = datetime.datetime.now()
+    # shuffle(sectype, l)
+    # print("[")
+    # for i in range(len(l)):
+    #     print(await mpc.output(l[i]), end=", ")
+    # print("]")
+    # delta = datetime.datetime.now() - start
     print("np shuffle: ", delta_np.total_seconds())
-    print("shuffle: ", delta.total_seconds())
+    # print("shuffle: ", delta.total_seconds())
     await mpc.shutdown()
 
 

@@ -152,11 +152,10 @@ class SparseMatrixColumn(SecureMatrix):
             else:
                 mpc.random.shuffle(self.sectype, res)
 
-            final_res = []
-            for i in range(len(res)):
-                if await mpc.output(res[i][0] != -1):
-                    final_res.append(res[i])
-                # Here, we leak the number of non-zero elements in the output matrix
+            final_res = [
+                tup for tup in range(len(res)) if await mpc.output(tup[0] != -1)
+            ]
+            # Here, we leak the number of non-zero elements in the output matrix
 
             return SparseMatrixCOO(
                 final_res, sectype=self.sectype, shape=(self.shape[0], other.shape[1])

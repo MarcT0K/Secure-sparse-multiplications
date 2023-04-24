@@ -278,8 +278,9 @@ async def benchmark_oblivious_shuffle(exp_env, n_dim):
         "Nb. rows": n_dim,
     }
     async with exp_env.benchmark(params):
-        z = await np_shuffle(secint, rand_list)
-        new_list = await mpc.output(z)
+        np_shuffle(rand_list)
+        await mpc.barrier()
+        new_list = await mpc.output(rand_list)
         assert (new_list != init_list).any()
         assert set(new_list) == set(init_list)
 
@@ -288,7 +289,7 @@ async def benchmark_oblivious_shuffle(exp_env, n_dim):
         "Nb. rows": n_dim,
     }
     async with exp_env.benchmark(params):
-        await np_shuffle_3PC(rand_list)
+        z = await np_shuffle_3PC(rand_list)
         new_list = await mpc.output(z)
         assert (new_list != init_list).any()
         assert set(new_list) == set(init_list)
