@@ -47,7 +47,7 @@ async def reveal_sort(keys, data, sectype):
         )
 
     if len(mpc.parties) != 3:
-        np_shuffle(merged)
+        await np_shuffle(merged)
     else:
         merged = await np_shuffle_3PC(merged)
 

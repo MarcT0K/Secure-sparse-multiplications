@@ -8,8 +8,6 @@ import numpy as np
 from mpyc import asyncoro, finfields, sectypes, thresha
 from mpyc.runtime import mpc
 
-from shuffle import np_shuffle
-
 
 @asyncoro.mpc_coro
 async def partial_reshare(x, ignore=None):

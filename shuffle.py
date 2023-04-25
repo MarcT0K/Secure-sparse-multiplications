@@ -8,15 +8,11 @@ from mpyc.runtime import mpc, Future, mpc_coro
 @mpc_coro
 async def np_random_unit_vector(sectype, n):
     """Uniformly random secret rotation of [1] + [0]*(n-1).
-
     Expected number of secret random bits needed is ceil(log_2 n) + c,
     with c a small constant, c < 3.
     """
 
-    if issubclass(sectype, mpc.SecureObject):
-        await mpc.returnType((sectype.array, True, (n,)))
-    else:
-        await mpc.returnType(Future)
+    await mpc.returnType((sectype.array, True, (n,)))
 
     if n == 1:
         return mpc.np_fromlist([sectype(1)])
@@ -35,7 +31,7 @@ async def np_random_unit_vector(sectype, n):
             u = v
         elif await mpc.output(u[0] * x[i]):  # TODO: mul_public
             # restart, keeping unused secret random bits x[:i]
-            x = mpc.np_hstack((x[:i], np_random_unit_vector(sectype, k - i)))
+            x = mpc.np_hstack((x[:i], mpc.np_random_bits(sectype, k - i)))
             i = k - 1
             u = mpc.np_fromlist([x[i], 1 - x[i]])
         else:
@@ -45,22 +41,25 @@ async def np_random_unit_vector(sectype, n):
     return u
 
 
-def np_shuffle(a, axis=None):
+async def np_shuffle(a, axis=None):
     """Shuffle numpy-like array x secretly in-place, and return None.
-
     Given array x may contain public or secret elements.
     """
     sectype = type(a).sectype
+
+    if len(a.shape) > 2:
+        raise ValueError("Can only shuffle 1D and 2D arrays")
+
     if axis is None:
         axis = 0
 
-    if axis >= len(a.shape):
+    if axis not in (0, 1, -1):
         raise ValueError("Invalid axis")
 
     x = mpc.np_copy(a)
 
     if axis != 0:
-        x = mpc.np_swapaxes(x, 0, axis)
+        x = mpc.np_transpose(x)
 
     n = x.shape[0]
 
@@ -76,8 +75,9 @@ def np_shuffle(a, axis=None):
         x = mpc.np_update(x, i, x_u)
 
     if axis != 0:
-        x = mpc.np_swapaxes(x, 0, axis)
+        x = mpc.np_transpose(x)
 
+    x = await mpc.gather(x)
     mpc.np_update(a, range(a.shape[0]), x)
 
 
@@ -103,7 +103,7 @@ async def test():
 
     print(await mpc.output(l_arr))
     start = datetime.datetime.now()
-    np_shuffle(l_arr, axis=0)
+    await np_shuffle(l_arr, axis=0)
     print("l_arr:", await mpc.output(l_arr))
     delta_np = datetime.datetime.now() - start
 

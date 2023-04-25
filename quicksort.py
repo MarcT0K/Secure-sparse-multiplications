@@ -62,7 +62,7 @@ async def parallel_quicksort(sec_arr, sectype, key=None, max_key_val=10**6):
     if len(mpc.parties) == 3:
         res = mpc.np_tolist(await np_shuffle_3PC(res))
     else:
-        res = mpc.np_tolist(np_shuffle(res))
+        res = mpc.np_tolist(await np_shuffle(res))
 
     key_func = (lambda x: x) if key is None else key
     pivots = [-1, len(res)]

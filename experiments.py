@@ -160,45 +160,6 @@ async def benchmark_dot_product(exp_env, n_dim=10**5, density=0.001):
 
     del dense_x, dense_y
 
-    # params = {
-    #     "Algorithm": "Sparse sharing",
-    #     "Nb. rows": n_dim,
-    #     "Nb. columns": 1,
-    #     "Density": density,
-    # }
-    # async with exp_env.benchmark(params):
-    #     sec_x = SparseVectorNumpy(x_sparse, secint)
-    #     sec_y = SparseVectorNumpy(y_sparse, secint)
-
-    # params = {
-    #     "Algorithm": "Sparse w/ Batcher",
-    #     "Nb. rows": n_dim,
-    #     "Nb. columns": 1,
-    #     "Density": density,
-    # }
-    # for i in range(1):
-    #     async with exp_env.benchmark(params):
-    #         z = sec_x.dot(sec_y)
-    #         assert await mpc.output(z) == real_res
-
-    # sec_x = SparseVectorNaiveOpti(x_sparse, secint)
-    # sec_y = SparseVectorNaiveOpti(y_sparse, secint)
-    # start = datetime.now()
-    # z = sec_x.dot(sec_y)
-    # assert await mpc.output(z) == real_res
-    # end = datetime.now()
-    # delta_sparse = end - start
-    # print("Time for sparse naive opti:", delta_sparse.total_seconds())
-
-    # sec_x = SparseVectorNaivePSIOpti(x_sparse, secint)
-    # sec_y = SparseVectorNaivePSIOpti(y_sparse, secint)
-    # start = datetime.now()
-    # z = await sec_x.dot(sec_y)
-    # assert await mpc.output(z) == real_res
-    # end = datetime.now()
-    # delta_sparse = end - start
-    # print("Time for sparse psi optimized:", delta_sparse.total_seconds())
-
     params["Algorithm"] = "Sparse sharing"
     async with exp_env.benchmark(params):
         sec_x = SparseVectorParallelQuicksort(x_sparse, secint)
@@ -278,8 +239,7 @@ async def benchmark_oblivious_shuffle(exp_env, n_dim):
         "Nb. rows": n_dim,
     }
     async with exp_env.benchmark(params):
-        np_shuffle(rand_list)
-        await mpc.barrier()
+        await np_shuffle(rand_list)
         new_list = await mpc.output(rand_list)
         assert (new_list != init_list).any()
         assert set(new_list) == set(init_list)
@@ -309,7 +269,7 @@ async def main():
 
     async with ExperimentalEnvironment("mat_mult.csv", CSV_FIELDS) as exp_env:
         for i, j, density in product(
-            range(2, 4), range(1, 10, 2), [0.001, 0.005, 0.01]
+            range(3, 5), range(1, 10, 2), [0.001, 0.005, 0.01]
         ):
             await benchmark_sparse_sparse_mat_mult(
                 exp_env, n_dim=10**2, m_dim=j * 10**i, density=density
