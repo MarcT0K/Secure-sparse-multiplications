@@ -12,26 +12,13 @@ import scipy.sparse
 from mpyc.runtime import mpc
 
 from matrices import (
-    DenseMatrix,
-    DenseMatrixNaive,
     DenseMatrixNumpy,
-    SparseMatrixColumn,
     SparseMatrixColumnNumpy,
-    SparseMatrixRow,
     SparseMatrixRowNumpy,
 )
 from vectors import (
-    DenseVector,
     DenseVectorNumpy,
-    SparseVector,
-    SparseVectorNaive,
-    SparseVectorNaiveOpti,
-    SparseVectorNaivePSI,
-    SparseVectorNaivePSIOpti,
-    SparseVectorNumpy,
-    SparseVectorORAM,
     SparseVectorParallelQuicksort,
-    SparseVectorQuicksort,
 )
 
 from resharing import np_shuffle_3PC
