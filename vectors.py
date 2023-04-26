@@ -60,7 +60,11 @@ class SparseVector(SecureMatrix):
         for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
             self._mat.append(to_sec_int(i))
             self._mat.append(to_sec_int(v))
-        self._mat = mpc.input(self._mat, senders=0)
+
+        if self._mat:
+            self._mat = mpc.input(self._mat, senders=0)
+        else:
+            self._mat = []
         self._mat = [
             [self._mat[i], self._mat[i + 1]] for i in range(0, len(self._mat), 2)
         ]
@@ -81,12 +85,14 @@ class SparseVector(SecureMatrix):
 class SparseVectorNumpy(SparseVector):
     def __init__(self, sparse_mat, sectype=None):
         super().__init__(sparse_mat, sectype)
-        np_mat = []
-        for i in range(len(self._mat)):
-            np_mat += self._mat[i]
-        np_mat = mpc.np_reshape(mpc.np_fromlist(np_mat), (len(self._mat), 2))
 
-        self._mat = np_mat
+        if self._mat:
+            np_mat = []
+            for i in range(len(self._mat)):
+                np_mat += self._mat[i]
+            np_mat = mpc.np_reshape(mpc.np_fromlist(np_mat), (len(self._mat), 2))
+
+            self._mat = np_mat
 
     def dot(self, other):
         if isinstance(other, SparseVectorNumpy):
@@ -175,6 +181,9 @@ class SparseVectorParallelQuicksort(SparseVectorNumpy):
         if isinstance(other, SparseVectorParallelQuicksort):
             if self.shape != other.shape:
                 raise ValueError("Incompatible vector size")
+            if not self._mat or not other._mat:
+                return self.sectype(0)
+
             return await sparse_vector_dot_parallel_quicksort(
                 self._mat, other._mat, self.sectype, key=lambda tup: tup[0]
             )

@@ -233,7 +233,6 @@ class SparseMatrixColumnNumpy(SecureMatrix):
 
             res = mpc.np_column_stack((mpc.np_transpose(sorting_keys), res))
 
-            start = datetime.datetime.now()
             if len(mpc.parties) == 3:
                 assert self.shape[0] * other.shape[1] * 10**3  # Prevent overflow
                 if mpc.pid == 0:
@@ -254,9 +253,6 @@ class SparseMatrixColumnNumpy(SecureMatrix):
                 res = res[:, 1:]
             else:
                 res = mpc.np_sort(res, axis=0, key=lambda tup: tup[0])
-            await mpc.barrier()
-            delta = datetime.datetime.now() - start
-            print("Sorting time: ", delta.total_seconds())
 
             comp = res[0 : res.shape[0] - 1, 0] == res[1 : res.shape[0], 0]
             res = res[:, 1:]  # We remove the sorting key
@@ -274,15 +270,10 @@ class SparseMatrixColumnNumpy(SecureMatrix):
 
             await mpc.barrier()
 
-            start = datetime.datetime.now()
-            print("here")
             if len(mpc.parties) == 3:
                 res = await np_shuffle_3PC(res)
             else:
                 mpc.random.shuffle(self.sectype, res)
-            await mpc.barrier()
-            delta = datetime.datetime.now() - start
-            print("Shuffling time: ", delta.total_seconds())
 
             final_res = []
             zero_test = await mpc.np_is_zero_public(
