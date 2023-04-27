@@ -119,6 +119,71 @@ def shuffle_experiments():
     logger.info("FINISHED ALL SHUFFLE EXPERIMENTS")
 
 
+def sorting_experiments():
+    logger.info("START SORTING EXPERIMENTS")
+
+    batcher_failed = False
+    quicksort_failed = False
+    radixsort_failed = False
+
+    for (
+        i,
+        j,
+    ) in product(range(3, 4), range(1, 10)):
+        if batcher_failed and quicksort_failed and radixsort_failed:
+            logger.warning("All algorithms failed")
+            break
+
+        seed = generate_seed()
+        list_length = j * 10**i
+        key_bit_length = 16
+        base_args = [
+            "python3",
+            "benchmark.py",
+            "-M3",
+            "--benchmark",
+            "sort",
+            "--seed",
+            str(seed),
+            "--nb-rows",
+            str(list_length),
+            "--sorting-bit-length",
+            str(key_bit_length),
+        ]
+        logger.info("Sorting experiment: seed=%d, length=%d", seed, list_length)
+
+        if quicksort_failed == 0:
+            subp = Popen(
+                base_args + ["--algo", "quick"],
+                stdout=PIPE,
+                stderr=STDOUT,
+            )
+            quicksort_failed = track_memory(subp)
+        else:
+            logger.warning("Skipped Quicksort")
+
+        if radixsort_failed == 0:
+            subp = Popen(
+                base_args + ["--algo", "radix"],
+                stdout=PIPE,
+                stderr=STDOUT,
+            )
+            radixsort_failed = track_memory(subp)
+        else:
+            logger.warning("Skipped radix sort")
+
+        if batcher_failed == 0:
+            subp = Popen(
+                base_args + ["--algo", "batcher"],
+                stdout=PIPE,
+                stderr=STDOUT,
+            )
+            batcher_failed = track_memory(subp)
+        else:
+            logger.warning("Skipped Batcher sort")
+    logger.info("FINISHED ALL SORTING EXPERIMENTS")
+
+
 def dot_product_experiments():
     logger.info("START DOT PRODUCT EXPERIMENTS")
     dense_failed = False
@@ -236,6 +301,7 @@ def main():
     setup_logger()
 
     try:
+        sorting_experiments()
         shuffle_experiments()
         dot_product_experiments()
         matmult_experiments()

@@ -248,7 +248,7 @@ class SparseMatrixColumnNumpy(SecureMatrix):
                 rand_sorting_keys = sorting_keys * 10**3 + rand_vect
                 res = mpc.np_column_stack((mpc.np_transpose(rand_sorting_keys), res))
                 res = await parallel_quicksort(
-                    res, self.sectype, key=lambda tup: tup[0]
+                    res, key=lambda tup: tup[0]
                 )
                 res = res[:, 1:]
             else:

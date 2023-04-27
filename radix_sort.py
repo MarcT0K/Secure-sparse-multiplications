@@ -36,7 +36,7 @@ async def dest_comp(B):
     return mpc.np_sum(T, axis=1) - 1
 
 
-async def reveal_sort(keys, data, sectype):
+async def reveal_sort(keys, data):
     assert keys.shape[0] == data.shape[0]
 
     if len(data.shape) == 1:
@@ -66,9 +66,7 @@ def int_to_secure_bits(number, sectype, nb_bits):
     return [sectype(int(c)) for c in bitstring][::-1]
 
 
-async def radix_sort(
-    data, key_bitlength, sectype, desc=False, already_decomposed=False
-):  # TODO: handle the descending order
+async def radix_sort(data, key_bitlength, desc=False, already_decomposed=False):
     n, l = data.shape
 
     if already_decomposed:
@@ -76,6 +74,7 @@ async def radix_sort(
     else:
         raise NotImplementedError
 
+    sectype = type(data).sectype
     h = mpc.np_fromlist([sectype(i) for i in range(n)])
     h_j = mpc.np_copy(h)
     bp_j = data[:, 0]
@@ -85,17 +84,17 @@ async def radix_sort(
     for i in range(key_bitlength):
         B_j = await bin_vec_to_B(bp_j)
         c_j = await dest_comp(B_j)
-        cp_j = await reveal_sort(h_j, c_j, sectype)
+        cp_j = await reveal_sort(h_j, c_j)
 
         if i < key_bitlength - 1:
             b_jpp = data[:, i + 1]
             concat_res = mpc.np_transpose(mpc.np_vstack((b_jpp, h)))
-            sort_res = await reveal_sort(cp_j, concat_res, sectype)
+            sort_res = await reveal_sort(cp_j, concat_res)
 
             h_j = sort_res[:, -1]
             bp_j = mpc.np_transpose(sort_res[:, :-1])
         else:
-            res = await reveal_sort(cp_j, data, sectype)
+            res = await reveal_sort(cp_j, data)
 
     if already_decomposed:
         res = res[:, key_bitlength:]
@@ -110,7 +109,7 @@ async def main():
     await mpc.start()
     sectype = mpc.SecInt(64)
     if mpc.pid == 0:
-        rand_list = [random.randint(0, 10**5) for _ in range(1000)]
+        rand_list = [random.randint(0, 2**32) for _ in range(1000)]
     else:
         rand_list = []
 
@@ -127,7 +126,7 @@ async def main():
 
     print("INIT:", await mpc.output(l))
 
-    s = await radix_sort(l, nb_bits, sectype=sectype, already_decomposed=True)
+    s = await radix_sort(l, nb_bits, already_decomposed=True)
     print(await mpc.output(s))
     await mpc.shutdown()
 

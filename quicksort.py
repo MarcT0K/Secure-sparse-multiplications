@@ -51,7 +51,7 @@ async def partition(sec_list, key=None):
     return p, res
 
 
-async def parallel_quicksort(sec_arr, sectype, key=None, max_key_val=10**6):
+async def parallel_quicksort(sec_arr, key=None):
     """Parallel implementation of the oblivious quicksort."""
     res = mpc.np_copy(sec_arr)
     init_shape = res.shape
@@ -138,7 +138,7 @@ async def test():
         (len(rand_list) // n_col, n_col),
     )
     print("Initial:", await mpc.output(l))
-    l_p = await parallel_quicksort(l, sectype, key=lambda tup: tup[0])
+    l_p = await parallel_quicksort(l, key=lambda tup: tup[0])
     print("Resultat", await mpc.output(l_p))
     await mpc.shutdown()
 

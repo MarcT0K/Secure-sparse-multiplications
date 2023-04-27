@@ -43,7 +43,7 @@ async def sparse_vector_dot_parallel_quicksort(vect1, vect2, sectype, key=None):
     unsorted = mpc.np_vstack((vect1, vect2))
     n = unsorted.shape[0]
 
-    sorted_array = await parallel_quicksort(unsorted, sectype, key)
+    sorted_array = await parallel_quicksort(unsorted, key)
 
     mult_vect = sorted_array[0 : n - 1, 1] * sorted_array[1:n, 1]
     comp_vect = sorted_array[0 : n - 1, 0] == sorted_array[1:n, 0]
