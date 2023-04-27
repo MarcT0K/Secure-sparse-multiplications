@@ -17,7 +17,7 @@ def log_stdout(process):
             print(line[:-1].decode())
 
 
-def track_memory(process: Popen, memory_usage_threshold=0.9) -> bool:
+def track_memory(process: Popen, memory_usage_threshold=0.95) -> bool:
     log_thread = threading.Thread(target=log_stdout, args=(process,))
     log_thread.start()
 
@@ -167,8 +167,6 @@ def matmult_experiments():
             dense_failed = track_memory(subp)
         else:
             print("Skipped dense experiments")
-
-        input()
 
         if sparse_failed == 0:
             subp = Popen(
