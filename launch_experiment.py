@@ -2,6 +2,7 @@ import logging
 import os
 import random
 import threading
+import time
 
 from subprocess import Popen, PIPE, STDOUT
 from itertools import product
@@ -47,19 +48,30 @@ def log_stdout(process):
             logger.debug(line[:-1].decode())
 
 
-def track_memory(process: Popen, memory_usage_threshold=0.95) -> bool:
+def track_memory(
+    process: Popen, memory_usage_threshold=0.4, time_threshold=7200
+) -> bool:
     log_thread = threading.Thread(target=log_stdout, args=(process,))
     log_thread.start()
+    start_time = time.time()
 
-    memory_overflow = False
+    killed = False
 
     while process.poll() is None:
         memory_usage = (
             1 - psutil.virtual_memory().available / psutil.virtual_memory().total
         )
+        elapsed_time = time.time() - start_time
 
-        if memory_usage > memory_usage_threshold and not memory_overflow:
-            memory_overflow = True
+        memory_overflow = memory_usage > memory_usage_threshold
+        timeout = elapsed_time > time_threshold
+
+        if not killed and (memory_overflow or timeout):
+            killed = True
+            if memory_overflow:
+                logger.error("Memory overflow")
+            if timeout:
+                logger.error("Timeout")
             logger.error("Killed the process")
             psutil_proc = psutil.Process(process.pid)
             for proc in psutil_proc.children(recursive=True):
@@ -67,7 +79,7 @@ def track_memory(process: Popen, memory_usage_threshold=0.95) -> bool:
             psutil_proc.kill()
 
     log_thread.join()
-    return memory_overflow
+    return killed
 
 
 def shuffle_experiments():
@@ -77,7 +89,7 @@ def shuffle_experiments():
     for (
         i,
         j,
-    ) in product(range(1, 4), range(1, 10)):
+    ) in product(range(1, 5), range(1, 10)):
         if mpyc_failed and threepc_failed:
             logger.warning("Both algorithms failed")
             break
@@ -129,7 +141,7 @@ def sorting_experiments():
     for (
         i,
         j,
-    ) in product(range(3, 4), range(1, 10)):
+    ) in product(range(1, 5), range(1, 10)):
         if batcher_failed and quicksort_failed and radixsort_failed:
             logger.warning("All algorithms failed")
             break
