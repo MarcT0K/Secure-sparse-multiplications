@@ -1,10 +1,39 @@
+import logging
 import os
 import threading
 
 from subprocess import Popen, PIPE, STDOUT
 from itertools import product
 
+import colorlog
 import psutil
+
+
+logger = colorlog.getLogger()
+
+
+def setup_logger():
+    logger.handlers = []  # Reset handlers
+    handler = colorlog.StreamHandler()
+    handler.setFormatter(
+        colorlog.ColoredFormatter(
+            "%(log_color)s[%(asctime)s %(levelname)s]%(reset)s %(white)s%(message)s",
+            datefmt="%H:%M:%S",
+            reset=True,
+            log_colors={
+                "DEBUG": "cyan",
+                "INFO": "green",
+                "WARNING": "yellow",
+                "ERROR": "red",
+                "CRITICAL": "red",
+            },
+        )
+    )
+    logger.addHandler(handler)
+    fhandler = logging.FileHandler("experiments.log")
+    fhandler.setFormatter(logging.Formatter("[%(asctime)s %(levelname)s] %(message)s"))
+    logger.addHandler(fhandler)
+    logger.setLevel(logging.DEBUG)
 
 
 def generate_seed():
@@ -14,7 +43,7 @@ def generate_seed():
 def log_stdout(process):
     with process.stdout:
         for line in iter(process.stdout.readline, b""):
-            print(line[:-1].decode())
+            logger.debug(line[:-1].decode())
 
 
 def track_memory(process: Popen, memory_usage_threshold=0.95) -> bool:
@@ -30,7 +59,7 @@ def track_memory(process: Popen, memory_usage_threshold=0.95) -> bool:
 
         if memory_usage > memory_usage_threshold and not memory_overflow:
             memory_overflow = True
-            print("Killed the process")
+            logger.error("Killed the process")
             psutil_proc = psutil.Process(process.pid)
             for proc in psutil_proc.children(recursive=True):
                 proc.kill()
@@ -40,6 +69,7 @@ def track_memory(process: Popen, memory_usage_threshold=0.95) -> bool:
 
 
 def shuffle_experiments():
+    logger.info("START SHUFFLE EXPERIMENTS")
     mpyc_failed = False
     threepc_failed = False
     for (
@@ -47,7 +77,7 @@ def shuffle_experiments():
         j,
     ) in product(range(1, 4), range(1, 10)):
         if mpyc_failed and threepc_failed:
-            print("Both algorithms failed")
+            logger.warning("Both algorithms failed")
             break
 
         seed = generate_seed()
@@ -63,6 +93,8 @@ def shuffle_experiments():
             "--nb-rows",
             str(list_length),
         ]
+        logger.info("Shuffle experiment: seed=%d, length=%d", seed, list_length)
+
         if mpyc_failed == 0:
             subp = Popen(
                 base_args + ["--algo", "MPyC"],
@@ -71,7 +103,7 @@ def shuffle_experiments():
             )
             mpyc_failed = track_memory(subp)
         else:
-            print("Skipped MPyC")
+            logger.warning("Skipped MPyC")
 
         if mpyc_failed == 0:
             subp = Popen(
@@ -81,20 +113,21 @@ def shuffle_experiments():
             )
             threepc_failed = track_memory(subp)
         else:
-            print("Skipped 3PC")
-    print("FINISHED ALL SHUFFLE EXPERIMENTS")
+            logger.warning("Skipped 3PC")
+    logger.info("FINISHED ALL SHUFFLE EXPERIMENTS")
 
 
 def dot_product_experiments():
+    logger.info("START DOT PRODUCT EXPERIMENTS")
     dense_failed = False
     sparse_failed = False
-    for i, j, density in product(range(3, 6), range(1, 10), [0.001, 0.005, 0.01]):
+    for i, j, density in product(range(2, 6), range(1, 10), [0.001, 0.005, 0.01]):
         if dense_failed and sparse_failed:
-            print("Both algorithms failed")
+            logger.warning("Both algorithms failed")
             break
 
         seed = generate_seed()
-        nb_cols = j * 10**i
+        nb_rows = j * 10**i
         base_args = [
             "python3",
             "benchmark.py",
@@ -104,12 +137,16 @@ def dot_product_experiments():
             "--seed",
             str(seed),
             "--nb-rows",
-            str(10**2),
-            "--nb-cols",
-            str(nb_cols),
+            str(nb_rows),
             "--density",
             str(density),
         ]
+        logger.info(
+            "Dot product experiment: seed=%d, dimensions=%d, density=%.3f",
+            seed,
+            nb_rows,
+            density,
+        )
 
         if dense_failed == 0:
             subp = Popen(
@@ -119,7 +156,7 @@ def dot_product_experiments():
             )
             dense_failed = track_memory(subp)
         else:
-            print("Skipped dense experiments")
+            logger.warning("Skipped dense experiments")
 
         if sparse_failed == 0:
             subp = Popen(
@@ -129,19 +166,23 @@ def dot_product_experiments():
             )
             sparse_failed = track_memory(subp)
         else:
-            print("Skipped sparse experiments")
+            logger.warning("Skipped sparse experiments")
+
+    logger.info("FINISHED ALL DOT PRODUCT EXPERIMENTS")
 
 
 def matmult_experiments():
+    logger.info("START MATRIX MULTIPLICATION EXPERIMENTS")
     dense_failed = False
     sparse_failed = False
     for i, j, density in product(range(2, 6), range(1, 10, 2), [0.001, 0.005, 0.01]):
         if dense_failed and sparse_failed:
-            print("Both algorithms failed")
+            logger.warning("Both algorithms failed")
             break
 
         seed = generate_seed()
         nb_cols = j * 10**i
+        nb_rows = 10**2
         base_args = [
             "python3",
             "benchmark.py",
@@ -151,12 +192,19 @@ def matmult_experiments():
             "--seed",
             str(seed),
             "--nb-rows",
-            str(10**2),
+            str(),
             "--nb-cols",
             str(nb_cols),
             "--density",
             str(density),
         ]
+        logger.info(
+            "Dot product experiment: seed=%d, dimensions=%dx%d, density=%.3f",
+            seed,
+            nb_rows,
+            nb_cols,
+            density,
+        )
 
         if not dense_failed:
             subp = Popen(
@@ -166,7 +214,7 @@ def matmult_experiments():
             )
             dense_failed = track_memory(subp)
         else:
-            print("Skipped dense experiments")
+            logger.warning("Skipped dense experiments")
 
         if sparse_failed == 0:
             subp = Popen(
@@ -176,10 +224,14 @@ def matmult_experiments():
             )
             sparse_failed = track_memory(subp)
         else:
-            print("Skipped sparse experiments")
+            logger.warning("Skipped sparse experiments")
+
+    logger.info("FINISHED ALL MATRIX MULTIPLICATION EXPERIMENTS")
 
 
 def main():
+    setup_logger()
+
     shuffle_experiments()
     dot_product_experiments()
     matmult_experiments()
