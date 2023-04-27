@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 import threading
 
 from subprocess import Popen, PIPE, STDOUT
@@ -37,7 +38,7 @@ def setup_logger():
 
 
 def generate_seed():
-    return int.from_bytes(os.urandom(4), "big")
+    return int.from_bytes(random.randbytes(4), "big")
 
 
 def log_stdout(process):
@@ -64,6 +65,7 @@ def track_memory(process: Popen, memory_usage_threshold=0.95) -> bool:
             for proc in psutil_proc.children(recursive=True):
                 proc.kill()
             psutil_proc.kill()
+
     log_thread.join()
     return memory_overflow
 
@@ -192,7 +194,7 @@ def matmult_experiments():
             "--seed",
             str(seed),
             "--nb-rows",
-            str(),
+            str(nb_rows),
             "--nb-cols",
             str(nb_cols),
             "--density",
@@ -230,11 +232,18 @@ def matmult_experiments():
 
 
 def main():
+    random.seed(74589312)
     setup_logger()
 
-    shuffle_experiments()
-    dot_product_experiments()
-    matmult_experiments()
+    try:
+        shuffle_experiments()
+        dot_product_experiments()
+        matmult_experiments()
+    except KeyboardInterrupt:  # To avoid memory leakage
+        psutil_proc = psutil.Process(os.getpid())
+        for proc in psutil_proc.children(recursive=True):
+            proc.kill()
+        raise
 
 
 if __name__ == "__main__":
