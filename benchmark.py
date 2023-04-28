@@ -72,7 +72,7 @@ class ExperimentalEnvironment:
         start_ts = datetime.now()
         start_bytes = ExperimentalEnvironment.current_sent_bytes()
         parameters["Timestamp"] = start_ts
-        
+
         yield self
         await mpc.barrier(f"Experiment {parameters['Algorithm']}")
 
@@ -372,7 +372,6 @@ async def main():
                 exp_env, n_dim=args["nb_rows"], alg_choice=args["algo"]
             )
     elif args["benchmark"] == "sort":
-        print(args, _rest)
         check_args(args, ["nb_rows", "sorting_bit_length"])
         async with ExperimentalEnvironment(
             args["benchmark"] + ".csv",
