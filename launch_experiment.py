@@ -49,7 +49,7 @@ def log_stdout(process):
 
 
 def track_memory(
-    process: Popen, memory_usage_threshold=0.95, time_threshold=3600
+    process: Popen, memory_usage_threshold=0.95, time_threshold=7200
 ) -> bool:
     log_thread = threading.Thread(target=log_stdout, args=(process,))
     log_thread.start()
@@ -203,7 +203,7 @@ def dot_product_experiments():
     logger.info("START DOT PRODUCT EXPERIMENTS")
     dense_failed = False
     sparse_failed = False
-    for i, j, density in product(range(1, 6), range(1, 10, 2), [0.001, 0.005, 0.01]):
+    for i, j, density in product(range(1, 9), range(1, 10, 2), [0.001, 0.005, 0.01]):
         if dense_failed and sparse_failed:
             logger.warning("Both algorithms failed")
             break
@@ -256,10 +256,12 @@ def dot_product_experiments():
 def matmult_experiments():
     logger.info("START MATRIX MULTIPLICATION EXPERIMENTS")
     dense_failed = False
-    sparse_failed = False
-    for i, j, density in product(range(2, 6), range(1, 10, 2), [0.001, 0.005, 0.01]):
-        if dense_failed and sparse_failed:
-            logger.warning("Both algorithms failed")
+    sparse01_failed = False
+    sparse05_failed = False
+    sparse1_failed = False
+    for i, j in product(range(2, 7), range(1, 10, 2)):
+        if dense_failed and sparse01_failed and sparse05_failed and sparse1_failed:
+            logger.warning("All algorithms failed")
             break
 
         seed = generate_seed()
@@ -278,19 +280,17 @@ def matmult_experiments():
             "--nb-cols",
             str(nb_cols),
             "--density",
-            str(density),
         ]
         logger.info(
-            "Matrix multiplication experiment: seed=%d, dimensions=%dx%d, density=%.3f",
+            "Matrix multiplication experiment: seed=%d, dimensions=%dx%d",
             seed,
             nb_rows,
             nb_cols,
-            density,
         )
 
         if not dense_failed:
             subp = Popen(
-                base_args + ["--algo", "dense"],
+                base_args + [str(0.001), "--algo", "dense"],
                 stdout=PIPE,
                 stderr=STDOUT,
             )
@@ -298,15 +298,35 @@ def matmult_experiments():
         else:
             logger.warning("Skipped dense experiments")
 
-        if sparse_failed == 0:
+        if sparse01_failed == 0:
             subp = Popen(
-                base_args + ["--algo", "sparse"],
+                base_args + [str(0.001), "--algo", "sparse"],
                 stdout=PIPE,
                 stderr=STDOUT,
             )
-            sparse_failed = track_memory(subp)
+            sparse01_failed = track_memory(subp)
         else:
-            logger.warning("Skipped sparse experiments")
+            logger.warning("Skipped sparse 0.1 percent experiments")
+
+        if sparse05_failed == 0:
+            subp = Popen(
+                base_args + [str(0.005), "--algo", "sparse"],
+                stdout=PIPE,
+                stderr=STDOUT,
+            )
+            sparse05_failed = track_memory(subp)
+        else:
+            logger.warning("Skipped sparse 0.5 percent experiments")
+
+        if sparse1_failed == 0:
+            subp = Popen(
+                base_args + [str(0.01), "--algo", "sparse"],
+                stdout=PIPE,
+                stderr=STDOUT,
+            )
+            sparse1_failed = track_memory(subp)
+        else:
+            logger.warning("Skipped sparse 1 percent experiments")
 
     logger.info("FINISHED ALL MATRIX MULTIPLICATION EXPERIMENTS")
 
