@@ -109,7 +109,7 @@ def shuffle_experiments():
         ]
         logger.info("Shuffle experiment: seed=%d, length=%d", seed, list_length)
 
-        if mpyc_failed == 0:
+        if not mpyc_failed:
             subp = Popen(
                 base_args + ["--algo", "MPyC"],
                 stdout=PIPE,
@@ -119,7 +119,7 @@ def shuffle_experiments():
         else:
             logger.warning("Skipped MPyC")
 
-        if threepc_failed == 0:
+        if not threepc_failed:
             subp = Popen(
                 base_args + ["--algo", "3PC"],
                 stdout=PIPE,
@@ -164,7 +164,7 @@ def sorting_experiments():
         ]
         logger.info("Sorting experiment: seed=%d, length=%d", seed, list_length)
 
-        if quicksort_failed == 0:
+        if not quicksort_failed:
             subp = Popen(
                 base_args + ["--algo", "quick"],
                 stdout=PIPE,
@@ -174,7 +174,7 @@ def sorting_experiments():
         else:
             logger.warning("Skipped Quicksort")
 
-        if batcher_failed == 0:
+        if not batcher_failed:
             subp = Popen(
                 base_args + ["--algo", "batcher"],
                 stdout=PIPE,
@@ -186,7 +186,7 @@ def sorting_experiments():
 
         for bit_length in [8, 16, 32, 48]:
             base_args = base_args[:-1] + [str(bit_length)]
-            if radixsort_failed == 0:
+            if not radixsort_failed:
                 subp = Popen(
                     base_args + ["--algo", "radix"],
                     stdout=PIPE,
@@ -230,7 +230,7 @@ def dot_product_experiments():
             density,
         )
 
-        if dense_failed == 0:
+        if not dense_failed:
             subp = Popen(
                 base_args + ["--algo", "dense"],
                 stdout=PIPE,
@@ -240,7 +240,7 @@ def dot_product_experiments():
         else:
             logger.warning("Skipped dense experiments")
 
-        if sparse_failed == 0:
+        if not sparse_failed:
             subp = Popen(
                 base_args + ["--algo", "sparse"],
                 stdout=PIPE,
@@ -298,7 +298,7 @@ def matmult_experiments():
         else:
             logger.warning("Skipped dense experiments")
 
-        if sparse01_failed == 0:
+        if not sparse01_failed:
             subp = Popen(
                 base_args + [str(0.001), "--algo", "sparse"],
                 stdout=PIPE,
@@ -308,7 +308,7 @@ def matmult_experiments():
         else:
             logger.warning("Skipped sparse 0.1 percent experiments")
 
-        if sparse05_failed == 0:
+        if not sparse05_failed:
             subp = Popen(
                 base_args + [str(0.005), "--algo", "sparse"],
                 stdout=PIPE,
@@ -318,7 +318,7 @@ def matmult_experiments():
         else:
             logger.warning("Skipped sparse 0.5 percent experiments")
 
-        if sparse1_failed == 0:
+        if not sparse1_failed:
             subp = Popen(
                 base_args + [str(0.01), "--algo", "sparse"],
                 stdout=PIPE,
