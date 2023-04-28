@@ -18,6 +18,7 @@ from matrices import (
 from vectors import (
     DenseVectorNumpy,
     SparseVectorParallelQuicksort,
+    OptimizedSparseVector,
 )
 
 from resharing import np_shuffle_3PC
@@ -144,20 +145,22 @@ async def benchmark_dot_product(exp_env, n_dim, density, alg_choice=None):
         params["Algorithm"] = "Dense"
         async with exp_env.benchmark(params):
             z = sec_dense_x.dot(sec_dense_y)
-            assert await mpc.output(z) == real_res
+            dense_res = await mpc.output(z)
+            assert dense_res == real_res
 
         del dense_x, dense_y
 
     if alg_choice in ["*", "sparse"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = SparseVectorParallelQuicksort(x_sparse, secint)
-            sec_y = SparseVectorParallelQuicksort(y_sparse, secint)
+            sec_x = OptimizedSparseVector(x_sparse, secint)
+            sec_y = OptimizedSparseVector(y_sparse, secint)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):
             z = await sec_x.dot(sec_y)
-            assert await mpc.output(z) == real_res
+            sparse_res = await mpc.output(z)
+            assert sparse_res == real_res
 
 
 async def benchmark_sparse_sparse_mat_mult(
@@ -257,11 +260,6 @@ async def benchmark_oblivious_shuffle(exp_env, n_dim, alg_choice=None):
             assert set(new_list) == set(init_list)
 
 
-def int_to_secure_bits(number, sectype, nb_bits):
-    bitstring = format(number, f"0{nb_bits}b")
-    return [sectype(int(c)) for c in bitstring][::-1]
-
-
 async def benchmark_oblivious_sorting(exp_env, n_dim, key_bit_length, alg_choice=None):
     if alg_choice is None:
         alg_choice = "*"
@@ -308,7 +306,10 @@ async def benchmark_oblivious_sorting(exp_env, n_dim, key_bit_length, alg_choice
 
         decomp_list = mpc.np_vstack(
             [
-                mpc.np_fromlist(int_to_secure_bits(r, secint, nb_bits) + [secint(r)])
+                mpc.np_fromlist(
+                    OptimizedSparseVector.int_to_secure_bits(r, secint, nb_bits)
+                    + [secint(r)]
+                )
                 for r in init_list
             ]
         )

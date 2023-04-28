@@ -1,3 +1,5 @@
+import math
+
 from matrices import DenseMatrix, DenseMatrixNumpy, SecureMatrix
 from sparse_dot_vector import *
 
@@ -53,13 +55,11 @@ class SparseVector(SecureMatrix):
 
         super().__init__(sectype)
         self.shape = sparse_mat.shape
-        to_sec_int = lambda x: self.sectype(int(x))
 
-        self.shape = sparse_mat.shape
         self._mat = []
         for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            self._mat.append(to_sec_int(i))
-            self._mat.append(to_sec_int(v))
+            self._mat.append(SparseVector.to_secint(self.sectype, i))
+            self._mat.append(SparseVector.to_secint(self.sectype, v))
 
         if self._mat:
             self._mat = mpc.input(self._mat, senders=0)
@@ -68,6 +68,10 @@ class SparseVector(SecureMatrix):
         self._mat = [
             [self._mat[i], self._mat[i + 1]] for i in range(0, len(self._mat), 2)
         ]
+
+    @staticmethod
+    def to_secint(sectype, x):
+        return sectype(int(x))
 
     def dot(self, other):
         if isinstance(other, SparseVector):
@@ -101,6 +105,54 @@ class SparseVectorNumpy(SparseVector):
             return sparse_vector_dot_np(self._mat, other._mat)
         else:
             raise NotImplementedError
+
+    async def print(self):
+        print(await mpc.output(self._mat))
+
+
+class OptimizedSparseVector(SparseVector):
+    def __init__(self, sparse_mat, sectype=None):
+        super().__init__(sparse_mat, sectype)
+        self.key_bit_length = int(math.log(self.shape[0], 2)) + 1
+
+        self._mat = []
+        for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
+            self._mat.extend(
+                OptimizedSparseVector.int_to_secure_bits(
+                    i, self.sectype, self.key_bit_length
+                )
+            )
+            self._mat.append(SparseVector.to_secint(self.sectype, i))
+            self._mat.append(SparseVector.to_secint(self.sectype, v))
+
+        if self._mat:
+            np_mat = mpc.np_reshape(
+                mpc.np_fromlist(self._mat),
+                (len(self._mat) // (self.key_bit_length + 2), self.key_bit_length + 2),
+            )
+            self._mat = mpc.input(np_mat, senders=0)
+
+    @staticmethod
+    def int_to_secure_bits(number, sectype, nb_bits):
+        bitstring = format(number, f"0{nb_bits}b")
+        return [sectype(int(c)) for c in bitstring][::-1]
+
+    async def dot(self, other):
+        if isinstance(other, OptimizedSparseVector):
+            if self.shape != other.shape:
+                raise ValueError("Incompatible vector size")
+
+            if not self._mat or not other._mat:
+                return self.sectype(0)
+
+            return await sparse_vector_dot_radix(
+                self._mat, other._mat, self.key_bit_length
+            )
+        else:
+            raise NotImplementedError
+
+    async def print(self):
+        print(await mpc.output(self._mat[:, self.key_bit_length :]))
 
 
 class SparseVectorNaive(SparseVector):
@@ -198,13 +250,12 @@ class SparseVectorORAM(SecureMatrix):
 
         super().__init__(sectype)
         self.shape = sparse_mat.shape
-        to_sec_int = lambda x: mpc.input(self.sectype(int(x)), senders=0)
 
         self.shape = sparse_mat.shape
         self._mat = [mpc.seclist([], self.sectype), mpc.seclist([], self.sectype)]
         for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            self._mat[0].append(to_sec_int(i))
-            self._mat[1].append(to_sec_int(v))
+            self._mat[0].append(SparseVector.to_secint(self.sectype, i))
+            self._mat[1].append(SparseVector.to_secint(self.sectype, v))
 
     async def dot(self, other):
         # TODO: fix => invalid output

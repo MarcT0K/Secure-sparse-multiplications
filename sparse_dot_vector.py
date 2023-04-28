@@ -2,6 +2,7 @@ from mpyc.runtime import mpc
 
 from quicksort import parallel_quicksort, quicksort
 from sortable_tuple import SortableTuple
+from radix_sort import radix_sort
 
 
 def sparse_vector_dot(vect1, vect2):
@@ -19,6 +20,16 @@ def sparse_vector_dot(vect1, vect2):
 def sparse_vector_dot_np(vect1, vect2):
     unsorted = mpc.np_vstack((vect1, vect2))
     sorted_array = mpc.np_sort(unsorted, axis=0, key=lambda tup: tup[0])
+
+    n = sorted_array.shape[0]
+    mult_vect = sorted_array[0 : n - 1, 1] * sorted_array[1:n, 1]
+    comp_vect = sorted_array[0 : n - 1, 0] == sorted_array[1:n, 0]
+    return mpc.np_sum(mult_vect * comp_vect)
+
+
+async def sparse_vector_dot_radix(vect1, vect2, key_bit_length):
+    unsorted = mpc.np_vstack((vect1, vect2))
+    sorted_array = await radix_sort(unsorted, key_bit_length, already_decomposed=True)
 
     n = sorted_array.shape[0]
     mult_vect = sorted_array[0 : n - 1, 1] * sorted_array[1:n, 1]
