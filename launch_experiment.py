@@ -119,7 +119,7 @@ def shuffle_experiments():
         else:
             logger.warning("Skipped MPyC")
 
-        if mpyc_failed == 0:
+        if threepc_failed == 0:
             subp = Popen(
                 base_args + ["--algo", "3PC"],
                 stdout=PIPE,
