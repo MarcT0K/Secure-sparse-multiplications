@@ -14,6 +14,8 @@ from matrices import (
     DenseMatrixNumpy,
     SparseMatrixColumnNumpy,
     SparseMatrixRowNumpy,
+    OptimizedSparseMatrixColumn,
+    OptimizedSparseMatrixRow,
 )
 from vectors import (
     DenseVectorNumpy,
@@ -210,8 +212,8 @@ async def benchmark_sparse_sparse_mat_mult(
     if alg_choice in ["sparse", "*"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = SparseMatrixColumnNumpy(x_sparse.transpose(), secint)
-            sec_y = SparseMatrixRowNumpy(x_sparse, secint)
+            sec_x = OptimizedSparseMatrixColumn(x_sparse.transpose(), secint)
+            sec_y = OptimizedSparseMatrixRow(x_sparse, secint)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):
