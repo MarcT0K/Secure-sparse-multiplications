@@ -32,7 +32,6 @@ CSV_FIELDS = [
     "Nb. rows",
     "Nb. columns",
     "Density",
-    "Memory overflow",
     "Runtime",
     "Communication cost",
 ]
@@ -73,17 +72,14 @@ class ExperimentalEnvironment:
         start_ts = datetime.now()
         start_bytes = ExperimentalEnvironment.current_sent_bytes()
         parameters["Timestamp"] = start_ts
-        try:
-            yield self
-            await mpc.barrier(f"Experiment {parameters['Algorithm']}")
-        except MemoryError:
-            parameters["Memory overflow"] = True
-        else:
-            end_ts = datetime.now()
-            end_bytes = ExperimentalEnvironment.current_sent_bytes()
-            parameters["Memory overflow"] = False
-            parameters["Runtime"] = (end_ts - start_ts).total_seconds()
-            parameters["Communication cost"] = end_bytes - start_bytes
+        
+        yield self
+        await mpc.barrier(f"Experiment {parameters['Algorithm']}")
+
+        end_ts = datetime.now()
+        end_bytes = ExperimentalEnvironment.current_sent_bytes()
+        parameters["Runtime"] = (end_ts - start_ts).total_seconds()
+        parameters["Communication cost"] = end_bytes - start_bytes
 
         if mpc.pid == 0:
             self._csv_writer.writerow(parameters)

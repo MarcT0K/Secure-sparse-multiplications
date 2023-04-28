@@ -49,7 +49,7 @@ def log_stdout(process):
 
 
 def track_memory(
-    process: Popen, memory_usage_threshold=0.4, time_threshold=7200
+    process: Popen, memory_usage_threshold=0.95, time_threshold=3600
 ) -> bool:
     log_thread = threading.Thread(target=log_stdout, args=(process,))
     log_thread.start()
@@ -89,7 +89,7 @@ def shuffle_experiments():
     for (
         i,
         j,
-    ) in product(range(1, 5), range(1, 10)):
+    ) in product(range(1, 5), range(1, 10, 2)):
         if mpyc_failed and threepc_failed:
             logger.warning("Both algorithms failed")
             break
@@ -141,14 +141,14 @@ def sorting_experiments():
     for (
         i,
         j,
-    ) in product(range(1, 5), range(1, 10)):
+    ) in product(range(1, 5), range(1, 10, 2)):
         if batcher_failed and quicksort_failed and radixsort_failed:
             logger.warning("All algorithms failed")
             break
 
         seed = generate_seed()
         list_length = j * 10**i
-        key_bit_length = 16
+        default_key_bit_length = 16
         base_args = [
             "python3",
             "benchmark.py",
@@ -160,7 +160,7 @@ def sorting_experiments():
             "--nb-rows",
             str(list_length),
             "--sorting-bit-length",
-            str(key_bit_length),
+            str(default_key_bit_length),
         ]
         logger.info("Sorting experiment: seed=%d, length=%d", seed, list_length)
 
@@ -174,16 +174,6 @@ def sorting_experiments():
         else:
             logger.warning("Skipped Quicksort")
 
-        if radixsort_failed == 0:
-            subp = Popen(
-                base_args + ["--algo", "radix"],
-                stdout=PIPE,
-                stderr=STDOUT,
-            )
-            radixsort_failed = track_memory(subp)
-        else:
-            logger.warning("Skipped radix sort")
-
         if batcher_failed == 0:
             subp = Popen(
                 base_args + ["--algo", "batcher"],
@@ -193,6 +183,19 @@ def sorting_experiments():
             batcher_failed = track_memory(subp)
         else:
             logger.warning("Skipped Batcher sort")
+
+        for bit_length in [8, 16, 32, 48]:
+            base_args = base_args[:-1] + [str(bit_length)]
+            if radixsort_failed == 0:
+                subp = Popen(
+                    base_args + ["--algo", "radix"],
+                    stdout=PIPE,
+                    stderr=STDOUT,
+                )
+                radixsort_failed = track_memory(subp)
+            else:
+                logger.warning("Skipped radix sort")
+
     logger.info("FINISHED ALL SORTING EXPERIMENTS")
 
 
@@ -200,7 +203,7 @@ def dot_product_experiments():
     logger.info("START DOT PRODUCT EXPERIMENTS")
     dense_failed = False
     sparse_failed = False
-    for i, j, density in product(range(2, 6), range(1, 10), [0.001, 0.005, 0.01]):
+    for i, j, density in product(range(1, 6), range(1, 10, 2), [0.001, 0.005, 0.01]):
         if dense_failed and sparse_failed:
             logger.warning("Both algorithms failed")
             break
