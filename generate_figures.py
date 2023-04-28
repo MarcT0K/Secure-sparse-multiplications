@@ -36,7 +36,7 @@ def plot_sharing_experiment(csv_name, rows_or_col, xlabel):
         (df["Algorithm"] == "Sparse sharing") & (df["Density"] == 0.01)
     ]
 
-    def figure_per_col(col, unit, log_scale_x, log_scale_y):
+    def figure_per_col(col, unit):
         fig, ax = plt.subplots()
 
         ax.plot(dense_sharing[f"Nb. {rows_or_col}"], dense_sharing[col], label="Dense")
@@ -57,29 +57,20 @@ def plot_sharing_experiment(csv_name, rows_or_col, xlabel):
         )
         ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
         ax.legend()
-        if log_scale_y:
-            ax.set_yscale("log")
-        else:
-            ax.set_yscale("linear")
 
-        if log_scale_x:
-            ax.set_xscale("log")
-        else:
-            ax.set_xscale("linear")
+        ax.set_yscale("log")
+        ax.set_xscale("log")
 
         fig.tight_layout()
         fig.savefig(
-            f"{csv_name}_sharing_{col.lower().replace(' ', '_')}_{'log' if log_scale_x else 'lin'}_{'log' if log_scale_y else 'lin'}.png",
+            f"{csv_name}_sharing_{col.lower().replace(' ', '_')}.png",
             dpi=400,
         )
 
         plt.close(fig)
 
-    for b1, b2 in [(i, j) for i in [True, False] for j in [True, False]]:
-        figure_per_col("Runtime", "s", b1, b2)
-
-    for b1, b2 in [(i, j) for i in [True, False] for j in [True, False]]:
-        figure_per_col("Communication cost", "bytes", b1, b2)
+    figure_per_col("Runtime", "s")
+    figure_per_col("Communication cost", "bytes")
 
 
 def plot_mult_experiment(csv_name, rows_or_col, xlabel):
@@ -95,7 +86,7 @@ def plot_mult_experiment(csv_name, rows_or_col, xlabel):
         (df["Algorithm"] == "Sparse w/ Quicksort") & (df["Density"] == 0.01)
     ]
 
-    def figure_per_col(col, unit, log_scale_x, log_scale_y):
+    def figure_per_col(col, unit):
         fig, ax = plt.subplots()
 
         ax.plot(dense_mult[f"Nb. {rows_or_col}"], dense_mult[col], label="Dense")
@@ -116,28 +107,18 @@ def plot_mult_experiment(csv_name, rows_or_col, xlabel):
         )
         ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
         ax.legend()
-        if log_scale_y:
-            ax.set_yscale("log")
-        else:
-            ax.set_yscale("linear")
-
-        if log_scale_x:
-            ax.set_xscale("log")
-        else:
-            ax.set_xscale("linear")
+        ax.set_yscale("log")
+        ax.set_xscale("log")
 
         fig.tight_layout()
         fig.savefig(
-            f"{csv_name}_mult_{col.lower().replace(' ', '_')}_{'log' if log_scale_x else 'lin'}_{'log' if log_scale_y else 'lin'}.png",
+            f"{csv_name}_mult_{col.lower().replace(' ', '_')}.png",
             dpi=400,
         )
         plt.close(fig)
 
-    for b1, b2 in [(i, j) for i in [True, False] for j in [True, False]]:
-        figure_per_col("Runtime", "s", b1, b2)
-
-    for b1, b2 in [(i, j) for i in [True, False] for j in [True, False]]:
-        figure_per_col("Communication cost", "bytes", b1, b2)
+    figure_per_col("Runtime", "s")
+    figure_per_col("Communication cost", "bytes")
 
 
 def plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel):
@@ -164,7 +145,7 @@ def plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel):
         (df["Algorithm"] == "Sparse sharing") & (df["Density"] == 0.01)
     ]
 
-    def figure_per_col(col, unit, log_scale_x, log_scale_y):
+    def figure_per_col(col, unit):
         fig, ax = plt.subplots()
 
         ax.plot(
@@ -189,28 +170,19 @@ def plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel):
         )
         ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
         ax.legend()
-        if log_scale_y:
-            ax.set_yscale("log")
-        else:
-            ax.set_yscale("linear")
 
-        if log_scale_x:
-            ax.set_xscale("log")
-        else:
-            ax.set_xscale("linear")
+        ax.set_yscale("log")
+        ax.set_xscale("log")
 
         fig.tight_layout()
         fig.savefig(
-            f"{csv_name}_mult_and_sharing_{col.lower().replace(' ', '_')}_{'log' if log_scale_x else 'lin'}_{'log' if log_scale_y else 'lin'}.png",
+            f"{csv_name}_mult_and_sharing_{col.lower().replace(' ', '_')}.png",
             dpi=400,
         )
         plt.close(fig)
 
-    for b1, b2 in [(i, j) for i in [True, False] for j in [True, False]]:
-        figure_per_col("Runtime", "s", b1, b2)
-
-    for b1, b2 in [(i, j) for i in [True, False] for j in [True, False]]:
-        figure_per_col("Communication cost", "bytes", b1, b2)
+    figure_per_col("Runtime", "s")
+    figure_per_col("Communication cost", "bytes")
 
 
 def gen_all_figures(csv_name, rows_or_col, xlabel):
@@ -224,7 +196,7 @@ def generate_shuffle_experiment():
     mpyc_shuffle = df[(df["Algorithm"] == "MPyC shuffle")]
     laur_shuffle = df[(df["Algorithm"] == "3PC shuffle")]
 
-    def figure_per_col(col, unit, log_scale_x, log_scale_y):
+    def figure_per_col(col, unit):
         fig, ax = plt.subplots()
 
         ax.plot(mpyc_shuffle["Nb. rows"], mpyc_shuffle[col], label="MPyC shuffle")
@@ -235,31 +207,73 @@ def generate_shuffle_experiment():
         )
         ax.set(xlabel="List length", ylabel=f"{col} ({unit})")
         ax.legend()
-        if log_scale_y:
-            ax.set_yscale("log")
-        else:
-            ax.set_yscale("linear")
 
-        if log_scale_x:
-            ax.set_xscale("log")
-        else:
-            ax.set_xscale("linear")
+        ax.set_yscale("log")
+        ax.set_xscale("log")
 
         fig.tight_layout()
         fig.savefig(
-            f"shuffle_{col.lower().replace(' ', '_')}_{'log' if log_scale_x else 'lin'}_{'log' if log_scale_y else 'lin'}.png",
+            f"shuffle_{col.lower().replace(' ', '_')}.png",
             dpi=400,
         )
         plt.close(fig)
 
-    for b1, b2 in [(i, j) for i in [True, False] for j in [True, False]]:
-        figure_per_col("Runtime", "s", b1, b2)
+    figure_per_col("Runtime", "s")
+    figure_per_col("Communication cost", "bytes")
 
-    for b1, b2 in [(i, j) for i in [True, False] for j in [True, False]]:
-        figure_per_col("Communication cost", "bytes", b1, b2)
+
+def generate_sorting_experiment():
+    df = pd.read_csv("sort.csv")
+    quicksort = df[(df["Algorithm"] == "Quicksort")]
+    radix_8bits = df[(df["Algorithm"] == "Radix sort") & (df["Key bit length"] == 8)]
+    radix_16bits = df[(df["Algorithm"] == "Radix sort") & (df["Key bit length"] == 16)]
+    radix_32bits = df[(df["Algorithm"] == "Radix sort") & (df["Key bit length"] == 32)]
+    radix_48bits = df[(df["Algorithm"] == "Radix sort") & (df["Key bit length"] == 48)]
+
+    def figure_per_col(col, unit):
+        fig, ax = plt.subplots()
+
+        ax.plot(quicksort["Nb. rows"], quicksort[col], label="Quick sort")
+        ax.plot(
+            radix_8bits["Nb. rows"],
+            radix_8bits[col],
+            label="Radix sort (8-bit sorting keys)",
+        )
+        ax.plot(
+            radix_16bits["Nb. rows"],
+            radix_16bits[col],
+            label="Radix sort (16-bit sorting keys)",
+        )
+        ax.plot(
+            radix_32bits["Nb. rows"],
+            radix_32bits[col],
+            label="Radix sort (32-bits sorting keys)",
+        )
+        ax.plot(
+            radix_48bits["Nb. rows"],
+            radix_48bits[col],
+            label="Radix sort (48-bits sorting keys)",
+        )
+
+        ax.set(xlabel="List length", ylabel=f"{col} ({unit})")
+        ax.legend()
+
+        ax.set_yscale("log")
+        ax.set_xscale("log")
+
+        fig.tight_layout()
+        fig.savefig(
+            f"sort_{col.lower().replace(' ', '_')}.png",
+            dpi=400,
+        )
+        plt.close(fig)
+
+    figure_per_col("Runtime", "s")
+    figure_per_col("Communication cost", "bytes")
 
 
 if __name__ == "__main__":
+    generate_sorting_experiment()
     generate_shuffle_experiment()
     gen_all_figures("dot_product", "rows", "Vector length")
     gen_all_figures("mat_mult", "columns", "Number of columns")
