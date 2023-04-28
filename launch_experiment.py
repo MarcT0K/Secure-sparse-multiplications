@@ -281,7 +281,7 @@ def matmult_experiments():
             str(density),
         ]
         logger.info(
-            "Dot product experiment: seed=%d, dimensions=%dx%d, density=%.3f",
+            "Matrix multiplication experiment: seed=%d, dimensions=%dx%d, density=%.3f",
             seed,
             nb_rows,
             nb_cols,
