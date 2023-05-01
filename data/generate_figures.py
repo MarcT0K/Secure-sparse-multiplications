@@ -76,15 +76,9 @@ def plot_sharing_experiment(csv_name, rows_or_col, xlabel):
 def plot_mult_experiment(csv_name, rows_or_col, xlabel):
     df = pd.read_csv(csv_name + ".csv")
     dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.001)]
-    sparse_mult_01 = df[
-        (df["Algorithm"] == "Sparse w/ Quicksort") & (df["Density"] == 0.001)
-    ]
-    sparse_mult_05 = df[
-        (df["Algorithm"] == "Sparse w/ Quicksort") & (df["Density"] == 0.005)
-    ]
-    sparse_mult_1 = df[
-        (df["Algorithm"] == "Sparse w/ Quicksort") & (df["Density"] == 0.01)
-    ]
+    sparse_mult_01 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.001)]
+    sparse_mult_05 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.005)]
+    sparse_mult_1 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.01)]
 
     def figure_per_col(col, unit):
         fig, ax = plt.subplots()
@@ -124,15 +118,9 @@ def plot_mult_experiment(csv_name, rows_or_col, xlabel):
 def plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel):
     df = pd.read_csv(csv_name + ".csv")
     dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.001)]
-    sparse_mult_01 = df[
-        (df["Algorithm"] == "Sparse w/ Quicksort") & (df["Density"] == 0.001)
-    ]
-    sparse_mult_05 = df[
-        (df["Algorithm"] == "Sparse w/ Quicksort") & (df["Density"] == 0.005)
-    ]
-    sparse_mult_1 = df[
-        (df["Algorithm"] == "Sparse w/ Quicksort") & (df["Density"] == 0.01)
-    ]
+    sparse_mult_01 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.001)]
+    sparse_mult_05 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.005)]
+    sparse_mult_1 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.01)]
 
     dense_sharing = df[(df["Algorithm"] == "Dense sharing") & (df["Density"] == 0.001)]
     sparse_sharing_01 = df[
@@ -274,7 +262,7 @@ def generate_sorting_experiment():
 
 if __name__ == "__main__":
     generate_sorting_experiment()
-    # generate_shuffle_experiment()
-    # gen_all_figures("dot_product", "rows", "Vector length")
-    # gen_all_figures("mat_mult", "columns", "Number of columns")
+    generate_shuffle_experiment()
+    gen_all_figures("dot_product", "rows", "Vector length")
+    gen_all_figures("mat_mult", "columns", "Number of columns")
     plt.close("all")
