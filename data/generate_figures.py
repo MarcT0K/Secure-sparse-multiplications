@@ -212,8 +212,8 @@ def generate_shuffle_experiment():
 
 def generate_sorting_experiment():
     df = pd.read_csv("sort.csv")
+    batchersort = df[(df["Algorithm"] == "Batcher sort")]
     quicksort = df[(df["Algorithm"] == "Quicksort")]
-    radix_8bits = df[(df["Algorithm"] == "Radix sort") & (df["Key bit length"] == 8)]
     radix_16bits = df[(df["Algorithm"] == "Radix sort") & (df["Key bit length"] == 16)]
     radix_32bits = df[(df["Algorithm"] == "Radix sort") & (df["Key bit length"] == 32)]
     radix_48bits = df[(df["Algorithm"] == "Radix sort") & (df["Key bit length"] == 48)]
@@ -221,26 +221,24 @@ def generate_sorting_experiment():
     def figure_per_col(col, unit):
         fig, ax = plt.subplots()
 
-        ax.plot(quicksort["Nb. rows"], quicksort[col], label="Quick sort")
         ax.plot(
-            radix_8bits["Nb. rows"],
-            radix_8bits[col],
-            label="Radix sort (8-bit sorting keys)",
+            batchersort["Nb. rows"], batchersort[col], label="Batcher's odd-even sort"
         )
+        ax.plot(quicksort["Nb. rows"], quicksort[col], label="Quicksort")
         ax.plot(
             radix_16bits["Nb. rows"],
             radix_16bits[col],
-            label="Radix sort (16-bit sorting keys)",
+            label="Radix sort (16-bit keys)",
         )
         ax.plot(
             radix_32bits["Nb. rows"],
             radix_32bits[col],
-            label="Radix sort (32-bits sorting keys)",
+            label="Radix sort (32-bits keys)",
         )
         ax.plot(
             radix_48bits["Nb. rows"],
             radix_48bits[col],
-            label="Radix sort (48-bits sorting keys)",
+            label="Radix sort (48-bits keys)",
         )
 
         ax.set(xlabel="List length", ylabel=f"{col} ({unit})")
