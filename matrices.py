@@ -535,7 +535,7 @@ class OptimizedSparseMatrixRow(SecureMatrix):
         self.shape = sparse_mat.shape
         self.key_bit_length = int(math.log(self.shape[1], 2)) + 1
         to_sec_int = lambda x: self.sectype(int(x))
-        self._mat = [[] for i in range(sparse_mat.shape[1])]
+        self._mat = [[] for i in range(sparse_mat.shape[0])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
             self._mat[i] += self.int_to_secure_bits(j) + [
                 to_sec_int(j),

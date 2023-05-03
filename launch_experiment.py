@@ -266,7 +266,7 @@ def matmult_experiments():
 
         seed = generate_seed()
         nb_cols = j * 10**i
-        nb_rows = 10**2
+        nb_rows = 10**3
         base_args = [
             "python3",
             "benchmark.py",
@@ -336,9 +336,9 @@ def main():
     setup_logger()
 
     try:
-        sorting_experiments()
-        shuffle_experiments()
-        dot_product_experiments()
+        # sorting_experiments()
+        # shuffle_experiments()
+        # dot_product_experiments()
         matmult_experiments()
     except KeyboardInterrupt:  # To avoid memory leakage
         psutil_proc = psutil.Process(os.getpid())
