@@ -263,4 +263,5 @@ if __name__ == "__main__":
     generate_shuffle_experiment()
     gen_all_figures("dot_product", "rows", "Vector length")
     gen_all_figures("mat_mult", "columns", "Number of columns")
+    gen_all_figures("mat_mult_large", "columns", "Number of columns")
     plt.close("all")
