@@ -3,13 +3,14 @@ import os
 import random
 import threading
 import time
+import glob
+import shutil
 
 from subprocess import Popen, PIPE, STDOUT
 from itertools import product
 
 import colorlog
 import psutil
-
 
 logger = colorlog.getLogger()
 
@@ -46,6 +47,21 @@ def log_stdout(process):
     with process.stdout:
         for line in iter(process.stdout.readline, b""):
             logger.debug(line[:-1].decode())
+
+
+def archive_experiment_results():
+    existing_results = glob.glob("*.csv") + glob.glob("*.log")
+
+    if not existing_results:
+        return
+
+    if not os.path.exists("archive"):
+        os.makedirs("archive")
+    archive_dir = "archive/" + time.strftime("%Y%m%d-%H%M%S", time.localtime())
+    os.makedirs(archive_dir)
+
+    for file in existing_results:
+        shutil.move(file, archive_dir)
 
 
 def track_memory(
@@ -333,6 +349,7 @@ def matmult_experiments():
 
 def main():
     random.seed(74589312)
+    archive_experiment_results()
     setup_logger()
 
     try:
