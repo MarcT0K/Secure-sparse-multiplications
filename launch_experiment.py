@@ -49,7 +49,7 @@ def log_stdout(process):
 
 
 def track_memory(
-    process: Popen, memory_usage_threshold=0.95, time_threshold=7200
+    process: Popen, memory_usage_threshold=0.95, time_threshold=36000
 ) -> bool:
     log_thread = threading.Thread(target=log_stdout, args=(process,))
     log_thread.start()
@@ -266,7 +266,7 @@ def matmult_experiments():
 
         seed = generate_seed()
         nb_cols = j * 10**i
-        nb_rows = 10**3
+        nb_rows = 10**2
         base_args = [
             "python3",
             "benchmark.py",
