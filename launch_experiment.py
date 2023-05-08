@@ -219,7 +219,9 @@ def dot_product_experiments():
     logger.info("START DOT PRODUCT EXPERIMENTS")
     dense_failed = False
     sparse_failed = False
-    for i, j, density in product(range(1, 9), range(1, 10, 2), [0.001, 0.005, 0.01]):
+    for i, j, density in product(
+        range(1, 9), range(1, 10, 2), [0.0001, 0.001, 0.005, 0.01]
+    ):
         if dense_failed and sparse_failed:
             logger.warning("Both algorithms failed")
             break
@@ -272,11 +274,18 @@ def dot_product_experiments():
 def matmult_experiments():
     logger.info("START MATRIX MULTIPLICATION EXPERIMENTS")
     dense_failed = False
+    sparse001_failed = False
     sparse01_failed = False
     sparse05_failed = False
     sparse1_failed = False
     for i, j in product(range(2, 7), range(1, 10, 2)):
-        if dense_failed and sparse01_failed and sparse05_failed and sparse1_failed:
+        if (
+            dense_failed
+            and sparse001_failed
+            and sparse01_failed
+            and sparse05_failed
+            and sparse1_failed
+        ):
             logger.warning("All algorithms failed")
             break
 
@@ -313,6 +322,16 @@ def matmult_experiments():
             dense_failed = track_memory(subp)
         else:
             logger.warning("Skipped dense experiments")
+
+        if not sparse001_failed:
+            subp = Popen(
+                base_args + [str(0.0001), "--algo", "sparse"],
+                stdout=PIPE,
+                stderr=STDOUT,
+            )
+            sparse001_failed = track_memory(subp)
+        else:
+            logger.warning("Skipped sparse 0.01 percent experiments")
 
         if not sparse01_failed:
             subp = Popen(
