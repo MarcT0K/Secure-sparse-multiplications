@@ -481,7 +481,7 @@ class OptimizedSparseMatrixColumn(SecureMatrix):
 
             if res.shape[0] == 1:
                 return SparseMatrixCOO(
-                    mpc.np_tolist(res),
+                    mpc.np_tolist(res[:, -3:]),
                     sectype=self.sectype,
                     shape=(self.shape[0], other.shape[1]),
                 )
@@ -521,7 +521,6 @@ class OptimizedSparseMatrixColumn(SecureMatrix):
             mask = [i for i, test in enumerate(zero_test) if not test]
             final_res = mpc.np_tolist(res[mask, :])
 
-            # TODO: create a numpy equivalent of this class
             return SparseMatrixCOO(
                 final_res, sectype=self.sectype, shape=(self.shape[0], other.shape[1])
             )
