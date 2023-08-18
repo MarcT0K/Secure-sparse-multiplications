@@ -1,6 +1,6 @@
-from cycler import cycler
 import matplotlib.pyplot as plt
 import pandas as pd
+from cycler import cycler
 
 params = {
     "text.usetex": True,

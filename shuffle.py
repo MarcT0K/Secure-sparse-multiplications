@@ -2,7 +2,7 @@ import datetime
 import random
 
 from mpyc.random import shuffle
-from mpyc.runtime import mpc, Future, mpc_coro
+from mpyc.runtime import Future, mpc, mpc_coro
 
 
 @mpc_coro

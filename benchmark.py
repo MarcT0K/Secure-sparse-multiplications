@@ -1,7 +1,6 @@
 import argparse
 import math
 import random
-
 from contextlib import asynccontextmanager
 from csv import DictWriter
 from datetime import datetime
@@ -12,18 +11,15 @@ from mpyc.runtime import mpc
 
 from matrices import (
     DenseMatrix,
+    DenseVector,
     SparseMatrixColumnColumn,
     SparseMatrixColumnRow,
-)
-from vectors import (
-    DenseVector,
     SparseVector,
 )
-
-from resharing import np_shuffle_3PC
-from shuffle import np_shuffle
 from quicksort import parallel_quicksort
 from radix_sort import radix_sort
+from resharing import np_shuffle_3PC
+from shuffle import np_shuffle
 
 CSV_FIELDS = [
     "Timestamp",

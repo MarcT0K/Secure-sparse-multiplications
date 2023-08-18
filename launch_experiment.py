@@ -1,13 +1,12 @@
+import glob
 import logging
 import os
 import random
+import shutil
 import threading
 import time
-import glob
-import shutil
-
-from subprocess import Popen, PIPE, STDOUT
 from itertools import product
+from subprocess import PIPE, STDOUT, Popen
 
 import colorlog
 import psutil
