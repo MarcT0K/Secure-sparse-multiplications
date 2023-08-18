@@ -11,13 +11,13 @@ import scipy.sparse
 from mpyc.runtime import mpc
 
 from matrices import (
-    DenseMatrixNumpy,
-    OptimizedSparseMatrixColumn,
-    OptimizedSparseMatrixRow,
+    DenseMatrix,
+    SparseMatrixColumnColumn,
+    SparseMatrixColumnRow,
 )
 from vectors import (
-    DenseVectorNumpy,
-    OptimizedSparseVector,
+    DenseVector,
+    SparseVector,
 )
 
 from resharing import np_shuffle_3PC
@@ -138,8 +138,8 @@ async def benchmark_dot_product(exp_env, n_dim, density, alg_choice=None):
     if alg_choice in ["*", "dense"]:
         params["Algorithm"] = "Dense sharing"
         async with exp_env.benchmark(params):
-            sec_dense_x = DenseVectorNumpy(dense_x.transpose(), sectype=secint)
-            sec_dense_y = DenseVectorNumpy(dense_y, sectype=secint)
+            sec_dense_x = DenseVector(dense_x.transpose(), sectype=secint)
+            sec_dense_y = DenseVector(dense_y, sectype=secint)
 
         params["Algorithm"] = "Dense"
         async with exp_env.benchmark(params):
@@ -152,8 +152,8 @@ async def benchmark_dot_product(exp_env, n_dim, density, alg_choice=None):
     if alg_choice in ["*", "sparse"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = OptimizedSparseVector(x_sparse, secint)
-            sec_y = OptimizedSparseVector(y_sparse, secint)
+            sec_x = SparseVector(x_sparse, secint)
+            sec_y = SparseVector(y_sparse, secint)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):
@@ -192,8 +192,8 @@ async def benchmark_sparse_sparse_mat_mult(
     if alg_choice in ["dense", "*"]:
         params["Algorithm"] = "Dense sharing"
         async with exp_env.benchmark(params):
-            sec_dense_t = DenseMatrixNumpy(dense_mat.transpose(), sectype=secint)
-            sec_dense = DenseMatrixNumpy(dense_mat, sectype=secint)
+            sec_dense_t = DenseMatrix(dense_mat.transpose(), sectype=secint)
+            sec_dense = DenseMatrix(dense_mat, sectype=secint)
         del dense_mat
 
         params["Algorithm"] = "Dense"
@@ -209,8 +209,8 @@ async def benchmark_sparse_sparse_mat_mult(
     if alg_choice in ["sparse", "*"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = OptimizedSparseMatrixColumn(x_sparse.transpose(), secint)
-            sec_y = OptimizedSparseMatrixRow(x_sparse, secint)
+            sec_x = SparseMatrixColumnColumn(x_sparse.transpose(), secint)
+            sec_y = SparseMatrixColumnRow(x_sparse, secint)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):
@@ -306,8 +306,7 @@ async def benchmark_oblivious_sorting(exp_env, n_dim, key_bit_length, alg_choice
         decomp_list = mpc.np_vstack(
             [
                 mpc.np_fromlist(
-                    OptimizedSparseVector.int_to_secure_bits(r, secint, nb_bits)
-                    + [secint(r)]
+                    SparseVector.int_to_secure_bits(r, secint, nb_bits) + [secint(r)]
                 )
                 for r in init_list
             ]

@@ -97,7 +97,7 @@ class SparseMatrixCOO(SecureMatrix):
         ...  # TODO
 
 
-class DenseMatrixNumpy(SecureMatrix):
+class DenseMatrix(SecureMatrix):
     def __init__(self, mat, sectype=None):
         super().__init__(sectype)
         if isinstance(mat, mpc.SecureArray):
@@ -111,12 +111,10 @@ class DenseMatrixNumpy(SecureMatrix):
             )
 
     def dot(self, other):
-        if not isinstance(other, DenseMatrixNumpy):
+        if not isinstance(other, DenseMatrix):
             raise ValueError("Can only multiply dense with dense")
 
-        return DenseMatrixNumpy(
-            mpc.np_matmul(self._mat, other._mat), sectype=self.sectype
-        )
+        return DenseMatrix(mpc.np_matmul(self._mat, other._mat), sectype=self.sectype)
 
     async def print(self):
         for i in range(self.shape[0]):
@@ -128,7 +126,7 @@ class DenseMatrixNumpy(SecureMatrix):
         return self._mat[i][j]
 
 
-class OptimizedSparseMatrixColumn(SecureMatrix):
+class SparseMatrixColumnColumn(SecureMatrix):
     def __init__(self, sparse_mat: ScipySparseMatType, sectype=None):
         super().__init__(sectype)
 
@@ -168,7 +166,7 @@ class OptimizedSparseMatrixColumn(SecureMatrix):
         if self.sectype != other.sectype:
             raise ValueError("Incompatible secure types")
 
-        if isinstance(other, OptimizedSparseMatrixRow):
+        if isinstance(other, SparseMatrixColumnRow):
             res = None
 
             sorting_key_length = self.key_bit_length + other.key_bit_length
@@ -258,7 +256,7 @@ class OptimizedSparseMatrixColumn(SecureMatrix):
         raise ValueError("Can only multiply SparseMatrixColumn with this object")
 
 
-class OptimizedSparseMatrixRow(SecureMatrix):
+class SparseMatrixColumnRow(SecureMatrix):
     def __init__(self, sparse_mat: ScipySparseMatType, sectype=None):
         super().__init__(sectype)
         self.shape = sparse_mat.shape

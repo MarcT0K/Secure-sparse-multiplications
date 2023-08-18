@@ -3,7 +3,7 @@ import scipy.sparse
 from mpyc.runtime import mpc
 
 from matrices import (
-    DenseMatrixNumpy,
+    DenseMatrix,
 )
 
 
@@ -27,7 +27,7 @@ async def benchmark_large_matrix():
     x_sparse = await mpc.transfer(x_sparse, senders=0)
 
     dense_mat = x_sparse.astype(int).todense()
-    sec_dense = DenseMatrixNumpy(dense_mat, sectype=secint)
+    sec_dense = DenseMatrix(dense_mat, sectype=secint)
     z = sec_dense + sec_dense
     await mpc.barrier()
     await mpc.shutdown()

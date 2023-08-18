@@ -1,17 +1,19 @@
 import math
 
-from matrices import DenseMatrixNumpy, SecureMatrix
+from mpyc.runtime import mpc
+
+from matrices import DenseMatrix, SecureMatrix
 from radix_sort import radix_sort
 
 
-class DenseVectorNumpy(DenseMatrixNumpy):
+class DenseVector(DenseMatrix):
     def __init__(self, mat, sectype=None):
         if mat.shape[1] != 1 and mat.shape[0] != 1:
             raise ValueError("Input must be a vector")
         super().__init__(mat, sectype)
 
     def dot(self, other):
-        if isinstance(other, DenseVectorNumpy):
+        if isinstance(other, DenseVector):
             res = super().dot(other)
             assert res.shape == (1, 1)
             return res.get(0, 0)
@@ -19,7 +21,7 @@ class DenseVectorNumpy(DenseMatrixNumpy):
             raise NotImplementedError
 
 
-class OptimizedSparseVector(SecureMatrix):
+class SparseVector(SecureMatrix):
     def __init__(self, sparse_mat, sectype=None):
         if sparse_mat.shape[1] != 1:
             raise ValueError("Input must be a vector")
@@ -32,9 +34,7 @@ class OptimizedSparseVector(SecureMatrix):
         self._mat = []
         for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
             self._mat.extend(
-                OptimizedSparseVector.int_to_secure_bits(
-                    i, self.sectype, self.key_bit_length
-                )
+                SparseVector.int_to_secure_bits(i, self.sectype, self.key_bit_length)
             )
             self._mat.append(SparseVector.to_secint(self.sectype, i))
             self._mat.append(SparseVector.to_secint(self.sectype, v))
@@ -47,12 +47,16 @@ class OptimizedSparseVector(SecureMatrix):
             self._mat = mpc.input(np_mat, senders=0)
 
     @staticmethod
+    def to_secint(sectype, x):
+        return sectype(int(x))
+
+    @staticmethod
     def int_to_secure_bits(number, sectype, nb_bits):
         bitstring = format(number, f"0{nb_bits}b")
         return [sectype(int(c)) for c in bitstring][::-1]
 
     async def dot(self, other):
-        if isinstance(other, OptimizedSparseVector):
+        if isinstance(other, SparseVector):
             if self.shape != other.shape:
                 raise ValueError("Incompatible vector size")
 
