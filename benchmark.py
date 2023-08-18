@@ -12,14 +12,11 @@ from mpyc.runtime import mpc
 
 from matrices import (
     DenseMatrixNumpy,
-    SparseMatrixColumnNumpy,
-    SparseMatrixRowNumpy,
     OptimizedSparseMatrixColumn,
     OptimizedSparseMatrixRow,
 )
 from vectors import (
     DenseVectorNumpy,
-    SparseVectorParallelQuicksort,
     OptimizedSparseVector,
 )
 
