@@ -81,10 +81,6 @@ async def np_shuffle(a, axis=None):
     mpc.np_update(a, range(a.shape[0]), x)
 
 
-async def shuffle_3pc(sectype, x):
-    ...
-
-
 async def test():
     await mpc.start()
     sectype = mpc.SecInt(64)
