@@ -12,8 +12,8 @@ from mpyc.runtime import mpc
 from matrices import (
     DenseMatrix,
     DenseVector,
-    SparseMatrixColumnColumn,
-    SparseMatrixColumnRow,
+    SparseMatrixColumn,
+    SparseMatrixRow,
     SparseVector,
 )
 from quicksort import parallel_quicksort
@@ -96,13 +96,13 @@ class ExperimentalEnvironment:
         await self.end()
 
 
-async def benchmark_dot_product(exp_env, n_dim, density, alg_choice=None):
+async def benchmark_vect_mult(exp_env, n_dim, density, alg_choice=None):
     if alg_choice is None:
         alg_choice = "*"
     assert alg_choice in ["*", "dense", "sparse"]
 
     print(
-        f"Dot product benchmark: dimension={n_dim}, density={density} algorithm={alg_choice}"
+        f"Vector multiplication benchmark: dimension={n_dim}, density={density} algorithm={alg_choice}"
     )
     secint = mpc.SecInt(64)
 
@@ -158,6 +158,69 @@ async def benchmark_dot_product(exp_env, n_dim, density, alg_choice=None):
             assert sparse_res == real_res
 
 
+async def benchmark_mat_vector_mult(exp_env, n_dim, density, alg_choice=None):
+    if alg_choice is None:
+        alg_choice = "*"
+    assert alg_choice in ["*", "dense", "sparse"]
+
+    print(
+        f"Matrix-vector multiplication benchmark: dimension={n_dim}, density={density} algorithm={alg_choice}"
+    )
+    secint = mpc.SecInt(64)
+
+    if mpc.pid == 0:
+        x_sparse = scipy.sparse.random(
+            n_dim, n_dim, density=density, dtype=np.int16
+        ).astype(int)
+        y_sparse = scipy.sparse.random(
+            n_dim, 1, density=density, dtype=np.int16
+        ).astype(int)
+    else:
+        x_sparse = None
+        y_sparse = None
+
+    x_sparse = await mpc.transfer(x_sparse, senders=0)
+    y_sparse = await mpc.transfer(y_sparse, senders=0)
+    nb_non_zeros = len((x_sparse @ y_sparse).data)
+
+    dense_x = x_sparse.astype(int).todense()
+    dense_y = y_sparse.astype(int).todense()
+
+    params = {
+        "Nb. rows": n_dim,
+        "Nb. columns": 1,
+        "Density": density,
+    }
+
+    if alg_choice in ["*", "dense"]:
+        params["Algorithm"] = "Dense sharing"
+        async with exp_env.benchmark(params):
+            sec_dense_x = DenseMatrix(dense_x, sectype=secint)
+            sec_dense_y = DenseVector(dense_y, sectype=secint)
+
+        params["Algorithm"] = "Dense"
+        async with exp_env.benchmark(params):
+            z = sec_dense_x.dot(sec_dense_y)
+            z_clear = await mpc.output(z._mat)
+            dense_nb_non_zeros = (z_clear != 0).sum()
+            assert nb_non_zeros == dense_nb_non_zeros
+
+        del dense_x, dense_y
+
+    if alg_choice in ["*", "sparse"]:
+        params["Algorithm"] = "Sparse sharing"
+        async with exp_env.benchmark(params):
+            sec_x = SparseMatrixRow(x_sparse, secint)
+            sec_y = SparseVector(y_sparse, secint)
+
+        params["Algorithm"] = "Sparse"
+        async with exp_env.benchmark(params):
+            z = await sec_x.dot(sec_y)
+
+            sparse_nb_non_zeros = len(z._mat)
+            assert nb_non_zeros == sparse_nb_non_zeros
+
+
 async def benchmark_sparse_sparse_mat_mult(
     exp_env, n_dim, m_dim, density, alg_choice=None
 ):
@@ -167,7 +230,7 @@ async def benchmark_sparse_sparse_mat_mult(
 
     secint = mpc.SecInt(64)
     print(
-        f"Matrix multiplication benchmark: dimensions={n_dim}x{m_dim}, density={density}, algorithm={alg_choice}"
+        f"Matrix-matrix multiplication benchmark: dimensions={n_dim}x{m_dim}, density={density}, algorithm={alg_choice}"
     )
     if mpc.pid == 0:
         x_sparse = scipy.sparse.random(
@@ -205,8 +268,8 @@ async def benchmark_sparse_sparse_mat_mult(
     if alg_choice in ["sparse", "*"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = SparseMatrixColumnColumn(x_sparse.transpose(), secint)
-            sec_y = SparseMatrixColumnRow(x_sparse, secint)
+            sec_x = SparseMatrixColumn(x_sparse.transpose(), secint)
+            sec_y = SparseMatrixRow(x_sparse, secint)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):
@@ -335,12 +398,23 @@ async def main():
     args, _rest = parser.parse_known_args()
     args = vars(args)
 
-    if args["benchmark"] == "dot_product":
+    if args["benchmark"] == "vect_mult":
         check_args(args, ["nb_rows", "density"])
         async with ExperimentalEnvironment(
             args["benchmark"] + ".csv", CSV_FIELDS, seed=args.get("seed")
         ) as exp_env:
-            await benchmark_dot_product(
+            await benchmark_vect_mult(
+                exp_env,
+                n_dim=args["nb_rows"],
+                density=args["density"],
+                alg_choice=args["algo"],
+            )
+    elif args["benchmark"] == "mat_vect_mult":
+        check_args(args, ["nb_rows", "density"])
+        async with ExperimentalEnvironment(
+            args["benchmark"] + ".csv", CSV_FIELDS, seed=args.get("seed")
+        ) as exp_env:
+            await benchmark_mat_vector_mult(
                 exp_env,
                 n_dim=args["nb_rows"],
                 density=args["density"],

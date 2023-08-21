@@ -232,7 +232,7 @@ def dot_product_experiments():
             "benchmark.py",
             "-M3",
             "--benchmark",
-            "dot_product",
+            "vect_mult",
             "--seed",
             str(seed),
             "--nb-rows",
