@@ -2,6 +2,7 @@ import math
 from abc import abstractmethod
 from typing import List, Optional, Tuple, Union
 
+import numpy as np
 import scipy.sparse
 from mpyc.runtime import mpc
 
@@ -17,11 +18,29 @@ class SecureMatrix:
     _mat: Optional[SparseMatrixListType] = None
     shape: Tuple[int, int]
 
-    def __init__(self, sectype=None):
+    def __init__(self, sectype=None, shape=None):
         if sectype is None:
             self.sectype = mpc.SecInt(64)
         else:
             self.sectype = sectype
+
+        if shape is None or not isinstance(shape, tuple) or len(shape) < 1:
+            raise ValueError("Invalid shape")
+        self.shape = shape
+        self.row_bit_length = int(math.log(self.shape[0], 2)) + 1
+        if len(shape) > 1:
+            self.col_bit_length = int(math.log(self.shape[1], 2)) + 1
+        else:
+            self.col_bit_length = 0
+
+    @staticmethod
+    def int_to_secure_bits(number, sectype, nb_bits):
+        bitstring = format(number, f"0{nb_bits}b")
+        return [sectype(int(c)) for c in bitstring][::-1]
+
+    @staticmethod
+    def to_secint(sectype, x):  # TODO: replace this?
+        return sectype(int(x))
 
     @abstractmethod
     def dot(self, other):
@@ -37,12 +56,13 @@ class SecureMatrix:
 
 class DenseMatrix(SecureMatrix):
     def __init__(self, mat, sectype=None):
-        super().__init__(sectype)
+        shape = (
+            (len(mat), len(mat[0])) if isinstance(mat, mpc.SecureArray) else mat.shape
+        )
+        super().__init__(sectype, shape)
         if isinstance(mat, mpc.SecureArray):
             self._mat = mat
-            self.shape = (len(mat), len(mat[0]))
         else:
-            self.shape = mat.shape
             temp_mat = [sectype(i) for i in mat.flatten().tolist()[0]]
             self._mat = mpc.input(
                 mpc.np_reshape(mpc.np_fromlist(temp_mat), self.shape), senders=0
@@ -87,34 +107,22 @@ class SparseVector(SecureMatrix):
         if sparse_mat.shape[1] != 1:
             raise ValueError("Input must be a vector")
 
-        super().__init__(sectype)
-        self.shape = sparse_mat.shape
-
-        self.key_bit_length = int(math.log(self.shape[0], 2)) + 1
+        super().__init__(sectype, sparse_mat.shape)
 
         self._mat = []
         for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
             self._mat.extend(
-                SparseVector.int_to_secure_bits(i, self.sectype, self.key_bit_length)
+                SecureMatrix.int_to_secure_bits(i, self.sectype, self.row_bit_length)
             )
-            self._mat.append(SparseVector.to_secint(self.sectype, i))
-            self._mat.append(SparseVector.to_secint(self.sectype, v))
+            self._mat.append(SecureMatrix.to_secint(self.sectype, i))
+            self._mat.append(SecureMatrix.to_secint(self.sectype, v))
 
         if self._mat:
             np_mat = mpc.np_reshape(
                 mpc.np_fromlist(self._mat),
-                (len(self._mat) // (self.key_bit_length + 2), self.key_bit_length + 2),
+                (len(self._mat) // (self.row_bit_length + 2), self.row_bit_length + 2),
             )
             self._mat = mpc.input(np_mat, senders=0)
-
-    @staticmethod
-    def to_secint(sectype, x):  # TODO: replace this?
-        return sectype(int(x))
-
-    @staticmethod
-    def int_to_secure_bits(number, sectype, nb_bits):
-        bitstring = format(number, f"0{nb_bits}b")
-        return [sectype(int(c)) for c in bitstring][::-1]
 
     async def dot(self, other):
         if isinstance(other, SparseVector):
@@ -126,7 +134,7 @@ class SparseVector(SecureMatrix):
 
             unsorted = mpc.np_vstack((self._mat, other._mat))
             sorted_array = await radix_sort(
-                unsorted, self.key_bit_length, already_decomposed=True
+                unsorted, self.row_bit_length, already_decomposed=True
             )
 
             n = sorted_array.shape[0]
@@ -137,7 +145,7 @@ class SparseVector(SecureMatrix):
             raise NotImplementedError
 
     async def print(self):
-        print(await mpc.output(self._mat[:, self.key_bit_length :]))
+        print(await mpc.output(self._mat[:, self.row_bit_length :]))
 
 
 class SparseMatrixCOO(SecureMatrix):
@@ -147,23 +155,24 @@ class SparseMatrixCOO(SecureMatrix):
         sectype=None,
         shape=None,
     ):
-        super().__init__(sectype)
-
         # https://stackoverflow.com/questions/4319014/iterating-through-a-scipy-sparse-vector-or-matrix
         if isinstance(sparse_mat, ScipySparseMatType):
-            assert shape is None
-            self.shape = sparse_mat.shape
-            to_sec_int = lambda x: self.sectype(int(x))
+            super().__init__(sectype, sparse_mat.shape)
             self._mat = []
             for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-                self._mat.append([to_sec_int(i), to_sec_int(j), to_sec_int(v)])
+                self._mat.append(
+                    [
+                        SecureMatrix.to_secint(self.sectype, i),
+                        SecureMatrix.to_secint(self.sectype, j),
+                        SecureMatrix.to_secint(self.sectype, v),
+                    ]
+                )
         elif isinstance(sparse_mat, list):
-            assert isinstance(shape, tuple) and len(shape) == 2
+            super().__init__(sectype, shape)
 
             for tup in sparse_mat:
                 assert len(tup) == 3
             self._mat = sparse_mat
-            self.shape = shape
         else:
             raise ValueError("Invalid input")
 
@@ -205,18 +214,17 @@ class SparseMatrixCOO(SecureMatrix):
         ...  # TODO
 
 
-class SparseMatrixColumnColumn(SecureMatrix):
+class SparseMatrixColumn(SecureMatrix):
     def __init__(self, sparse_mat: ScipySparseMatType, sectype=None):
-        super().__init__(sectype)
+        super().__init__(sectype, sparse_mat.shape)
 
-        self.shape = sparse_mat.shape
-        self.key_bit_length = int(math.log(self.shape[0], 2)) + 1
-        to_sec_int = lambda x: self.sectype(int(x))
         self._mat = [[] for i in range(sparse_mat.shape[1])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            self._mat[j] += self.int_to_secure_bits(i) + [
-                to_sec_int(i),
-                to_sec_int(v),
+            self._mat[j] += SecureMatrix.int_to_secure_bits(
+                i, self.sectype, self.row_bit_length
+            ) + [
+                SecureMatrix.to_secint(self.sectype, i),
+                SecureMatrix.to_secint(self.sectype, v),
             ]
 
         self._mat = [
@@ -224,8 +232,8 @@ class SparseMatrixColumnColumn(SecureMatrix):
                 mpc.np_reshape(
                     mpc.np_fromlist(self._mat[k]),
                     (
-                        len(self._mat[k]) // (self.key_bit_length + 2),
-                        self.key_bit_length + 2,
+                        len(self._mat[k]) // (self.row_bit_length + 2),
+                        self.row_bit_length + 2,
                     ),
                 ),
                 senders=0,
@@ -235,20 +243,16 @@ class SparseMatrixColumnColumn(SecureMatrix):
             for k in range(len(self._mat))
         ]
 
-    def int_to_secure_bits(self, number):
-        bitstring = format(number, f"0{self.key_bit_length}b")
-        return [self.sectype(int(c)) for c in bitstring][::-1]
-
     async def dot(self, other) -> SparseMatrixCOO:
         if self.shape[1] != other.shape[0]:
             raise ValueError("Invalid dimensions")
         if self.sectype != other.sectype:
             raise ValueError("Incompatible secure types")
 
-        if isinstance(other, SparseMatrixColumnRow):
+        if isinstance(other, SparseMatrixRow):
             res = None
 
-            sorting_key_length = self.key_bit_length + other.key_bit_length
+            sorting_key_length = self.row_bit_length + other.col_bit_length
 
             for k in range(self.shape[1]):
                 if self._mat[k] is None or other._mat[k] is None:
@@ -306,6 +310,7 @@ class SparseMatrixColumnColumn(SecureMatrix):
 
             col_val = mpc.np_tolist(res[:, -1])
             col_i = res[:-1, 0] * (1 - comp) - comp
+            # If the test is false, the value of this column is -1 (i.e., a placeholder)
 
             for i in range(res.shape[0] - 1):
                 col_val[i + 1] = col_val[i + 1] + comp[i] * col_val[i]
@@ -331,26 +336,20 @@ class SparseMatrixColumnColumn(SecureMatrix):
             return SparseMatrixCOO(
                 final_res, sectype=self.sectype, shape=(self.shape[0], other.shape[1])
             )
-        elif isinstance(other, SparseVector):
-            return await self._matrix_vector_prod(other)
-
-        raise ValueError("Can only multiply SparseMatrixColumn with this object")
-
-    async def _matrix_vector_prod(self, other):
-        res = []
+        raise NotImplementedError
 
 
-class SparseMatrixColumnRow(SecureMatrix):
+class SparseMatrixRow(SecureMatrix):
     def __init__(self, sparse_mat: ScipySparseMatType, sectype=None):
-        super().__init__(sectype)
-        self.shape = sparse_mat.shape
-        self.key_bit_length = int(math.log(self.shape[1], 2)) + 1
-        to_sec_int = lambda x: self.sectype(int(x))
+        super().__init__(sectype, sparse_mat.shape)
+
         self._mat = [[] for i in range(sparse_mat.shape[0])]
         for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            self._mat[i] += self.int_to_secure_bits(j) + [
-                to_sec_int(j),
-                to_sec_int(v),
+            self._mat[i] += SecureMatrix.int_to_secure_bits(
+                j, self.sectype, self.col_bit_length
+            ) + [
+                SecureMatrix.to_secint(self.sectype, j),
+                SecureMatrix.to_secint(self.sectype, v),
             ]
 
         self._mat = [
@@ -358,8 +357,8 @@ class SparseMatrixColumnRow(SecureMatrix):
                 mpc.np_reshape(
                     mpc.np_fromlist(self._mat[k]),
                     (
-                        len(self._mat[k]) // (self.key_bit_length + 2),
-                        self.key_bit_length + 2,
+                        len(self._mat[k]) // (self.col_bit_length + 2),
+                        self.col_bit_length + 2,
                     ),
                 ),
                 senders=0,
@@ -369,6 +368,61 @@ class SparseMatrixColumnRow(SecureMatrix):
             for k in range(len(self._mat))
         ]
 
-    def int_to_secure_bits(self, number):
-        bitstring = format(number, f"0{self.key_bit_length}b")
-        return [self.sectype(int(c)) for c in bitstring][::-1]
+    async def _matrix_vector_prod(self, other):
+        sorting_key_length = self.col_bit_length + 1
+        size_diff = self._mat.shape[1] - other._mat.shape[0]
+
+        zeros_for_vect = self.sectype.array(np.zeros((other.shape[0], size_diff + 1)))
+        ones_for_mat = self.sectype.array(np.ones((self.shape[0], 1)))
+
+        padded_vect = mpc.np_hstack(
+            (
+                other._mat[:, : self.col_bit_length],
+                zeros_for_vect,
+                other._mat[:, self.col_bit_length :],
+            )
+        )  # We add [size_diff] zero bits to have matrices with the same number of colums
+        # We add an extra zero bit to differentiate the matrix values from the vector values
+        padded_matrix = mpc.np_hstack(
+            (
+                self._mat[
+                    :, self.row_bit_length : self.row_bit_length + self.col_bit_length
+                ],
+                ones_for_mat,
+                self._mat[:, : self.row_bit_length],
+                self._mat[:, self.row_bit_length + self.col_bit_length :],
+            )
+        )
+        res = mpc.np_vstack((padded_vect, padded_matrix))
+
+        if len(mpc.parties) == 3:
+            res = await radix_sort(res, sorting_key_length, already_decomposed=True)
+        else:
+            raise NotImplementedError
+
+        last_vect_val = self.sectype(0)
+        val_col = []
+        for i in range(res.shape[0]):
+            is_vect_elem = 1 - res[i, self.col_bit_length]
+            last_vect_val = (1 - is_vect_elem) * last_vect_val + is_vect_elem * res[
+                i, -1
+            ]
+            val_col.append(res[i, -1] * last_vect_val * (1 - is_vect_elem))
+
+        # TODO: append the value column
+
+        res = np.hstack(
+            (res[:, self.col_bit_length + 1 : self.row_bit_length + 1], val_col)
+        )
+        # We remove all information about the column index of the non-zeros
+        # TODO: finish
+
+    async def dot(self, other):
+        if self.shape[1] != other.shape[0]:
+            raise ValueError("Invalid dimensions")
+        if self.sectype != other.sectype:
+            raise ValueError("Incompatible secure types")
+
+        if isinstance(other, SparseVector):
+            return await self._matrix_vector_prod(other)
+        raise NotImplementedError
