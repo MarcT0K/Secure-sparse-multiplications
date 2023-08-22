@@ -28,10 +28,7 @@ class SecureMatrix:
             raise ValueError("Invalid shape")
         self.shape = shape
         self.row_bit_length = int(math.log(self.shape[0], 2)) + 1
-        if len(shape) > 1:
-            self.col_bit_length = int(math.log(self.shape[1], 2)) + 1
-        else:
-            self.col_bit_length = 0
+        self.col_bit_length = int(math.log(self.shape[1], 2)) + 1
 
     @staticmethod
     def int_to_secure_bits(number, sectype, nb_bits):
@@ -69,10 +66,11 @@ class DenseMatrix(SecureMatrix):
             )
 
     def dot(self, other):
-        if not isinstance(other, DenseMatrix):
-            raise ValueError("Can only multiply dense with dense")
-
-        return DenseMatrix(mpc.np_matmul(self._mat, other._mat), sectype=self.sectype)
+        if isinstance(other, DenseMatrix) or isinstance(other, DenseVector):
+            return DenseMatrix(
+                mpc.np_matmul(self._mat, other._mat), sectype=self.sectype
+            )
+        raise ValueError("Can only multiply dense with dense")
 
     async def print(self):
         for i in range(self.shape[0]):
@@ -103,26 +101,41 @@ class DenseVector(DenseMatrix):
 
 
 class SparseVector(SecureMatrix):
-    def __init__(self, sparse_mat, sectype=None):
-        if sparse_mat.shape[1] != 1:
+    def __init__(self, sparse_mat, sectype=None, shape=None):
+        assert (
+            (isinstance(sparse_mat, mpc.SecureArray) and shape is not None)
+            or (sparse_mat == [] and shape is not None)
+            or shape is None
+        )
+
+        if isinstance(sparse_mat, mpc.SecureArray) or sparse_mat == []:
+            super().__init__(sectype, shape)
+            self._mat = sparse_mat
+        else:
+            super().__init__(sectype, sparse_mat.shape)
+
+            self._mat = []
+            for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
+                self._mat.extend(
+                    SecureMatrix.int_to_secure_bits(
+                        i, self.sectype, self.row_bit_length
+                    )
+                )
+                self._mat.append(SecureMatrix.to_secint(self.sectype, i))
+                self._mat.append(SecureMatrix.to_secint(self.sectype, v))
+
+            if self._mat:
+                np_mat = mpc.np_reshape(
+                    mpc.np_fromlist(self._mat),
+                    (
+                        len(self._mat) // (self.row_bit_length + 2),
+                        self.row_bit_length + 2,
+                    ),
+                )
+                self._mat = mpc.input(np_mat, senders=0)
+
+        if self.shape[1] != 1:
             raise ValueError("Input must be a vector")
-
-        super().__init__(sectype, sparse_mat.shape)
-
-        self._mat = []
-        for i, _j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
-            self._mat.extend(
-                SecureMatrix.int_to_secure_bits(i, self.sectype, self.row_bit_length)
-            )
-            self._mat.append(SecureMatrix.to_secint(self.sectype, i))
-            self._mat.append(SecureMatrix.to_secint(self.sectype, v))
-
-        if self._mat:
-            np_mat = mpc.np_reshape(
-                mpc.np_fromlist(self._mat),
-                (len(self._mat) // (self.row_bit_length + 2), self.row_bit_length + 2),
-            )
-            self._mat = mpc.input(np_mat, senders=0)
 
     async def dot(self, other):
         if isinstance(other, SparseVector):
@@ -362,60 +375,144 @@ class SparseMatrixRow(SecureMatrix):
                     ),
                 ),
                 senders=0,
-            )
+            )  # Each row is represented as a sparse vector
             if len(self._mat[k])
             else None
             for k in range(len(self._mat))
         ]
 
-    async def _matrix_vector_prod(self, other):
+    async def _matrix_vector_prod(self, other) -> SparseVector:
         sorting_key_length = self.col_bit_length + 1
-        size_diff = self._mat.shape[1] - other._mat.shape[0]
 
-        zeros_for_vect = self.sectype.array(np.zeros((other.shape[0], size_diff + 1)))
-        ones_for_mat = self.sectype.array(np.ones((self.shape[0], 1)))
+        ### NUMPY-LIKE MATRIX PREPARATION (i.e., for parallelized operations)
+        padded_matrix = []
+        for i in range(self.shape[0]):
+            if not self._mat[i]:
+                continue
+
+            bin_row_ind = (
+                SecureMatrix.int_to_secure_bits(i, self.sectype, self.row_bit_length)
+                * self._mat[i].shape[0]
+            )
+            int_row_ind = self.sectype.array(
+                i * np.ones((other._mat.shape[0], 1), dtype=int)
+            )
+            bin_row_ind = mpc.np_reshape(
+                mpc.np_fromlist(bin_row_ind),
+                (len(bin_row_ind) // self.row_bit_length, self.row_bit_length),
+            )
+            ones = self.sectype.array(np.ones((self._mat[i].shape[0], 1), dtype=int))
+            curr_row_mat = mpc.np_hstack(
+                (  # We place the column binary representation first to sort based on columns
+                    self._mat[i][:, : self.col_bit_length],
+                    ones,
+                    bin_row_ind,
+                    int_row_ind,
+                    self._mat[i][:, -2:-1],
+                )
+            )
+
+            padded_matrix.append(curr_row_mat)
+
+        padded_matrix = mpc.np_vstack(
+            padded_matrix
+        )  # We concatenate (vertically) all row matrices
+
+        if not other._mat or padded_matrix is None:
+            return SparseVector([], self.sectype, shape=(self.shape[0], 1))
+
+        zeros_for_vect = self.sectype.array(
+            np.zeros((other._mat.shape[0], self.row_bit_length), dtype=int)
+        )
+        placeholder_for_vect = self.sectype.array(
+            -np.ones((other._mat.shape[0], 1), dtype=int)
+        )  # Replace the integer row indices by placeholders so they can be removed at the end of the function
 
         padded_vect = mpc.np_hstack(
             (
                 other._mat[:, : self.col_bit_length],
                 zeros_for_vect,
-                other._mat[:, self.col_bit_length :],
+                placeholder_for_vect,
+                other._mat[:, -2:-1],
             )
         )  # We add [size_diff] zero bits to have matrices with the same number of colums
         # We add an extra zero bit to differentiate the matrix values from the vector values
-        padded_matrix = mpc.np_hstack(
-            (
-                self._mat[
-                    :, self.row_bit_length : self.row_bit_length + self.col_bit_length
-                ],
-                ones_for_mat,
-                self._mat[:, : self.row_bit_length],
-                self._mat[:, self.row_bit_length + self.col_bit_length :],
-            )
-        )
+
         res = mpc.np_vstack((padded_vect, padded_matrix))
 
+        clear = await mpc.output(res)
+        for i in range(clear.shape[0]):
+            print(clear[i])
+
+        ### MULTIPLICATION STEP
         if len(mpc.parties) == 3:
-            res = await radix_sort(res, sorting_key_length, already_decomposed=True)
+            res = await radix_sort(
+                res,
+                self.col_bit_length + 1,
+                already_decomposed=True,
+            )
         else:
             raise NotImplementedError
 
+        clear = await mpc.output(res)
+        for i in range(clear.shape[0]):
+            print(clear[i])
         last_vect_val = self.sectype(0)
+        cond_vect = mpc.np_fromlist(res[:, self.col_bit_length])
         val_col = []
         for i in range(res.shape[0]):
-            is_vect_elem = 1 - res[i, self.col_bit_length]
+            is_vect_elem = 1 - cond_vect[i]
             last_vect_val = (1 - is_vect_elem) * last_vect_val + is_vect_elem * res[
                 i, -1
             ]
             val_col.append(res[i, -1] * last_vect_val * (1 - is_vect_elem))
 
-        # TODO: append the value column
+        val_col = mpc.np_reshape(mpc.np_fromlist(val_col), (res.shape[0], 1))
 
-        res = np.hstack(
-            (res[:, self.col_bit_length + 1 : self.row_bit_length + 1], val_col)
-        )
+        res = mpc.np_hstack((res[:, :-1], val_col))
         # We remove all information about the column index of the non-zeros
-        # TODO: finish
+
+        clear = await mpc.output(res)
+        for i in range(clear.shape[0]):
+            print(clear[i])
+        # AGGREGATION STEP
+        if len(mpc.parties) == 3:
+            res = await radix_sort(
+                res, self.row_bit_length, already_decomposed=True, keep_bin_keys=True
+            )
+        else:
+            raise NotImplementedError
+
+        # We compare the integer representation of the column index for all pairs of consecutive elements
+        comp = res[0 : res.shape[0] - 1, -2] == res[1 : res.shape[0], -2]
+
+        col_val = mpc.np_tolist(res[:, -1])
+        col_i = res[:-1, -2] * (1 - comp) + (-1) * comp
+        # If the test is false, the value of this column is -1 (i.e., a placeholder)
+
+        for i in range(res.shape[0] - 1):
+            col_val[i + 1] = col_val[i + 1] + comp[i] * col_val[i]
+        col_i = mpc.np_hstack((col_i, res[-1, 1:2]))
+        col_val = mpc.np_transpose(mpc.np_fromlist(col_val))
+        col_i = mpc.np_transpose(col_i)
+
+        res = mpc.np_transpose(mpc.np_vstack((res[:, -2], col_i, col_val)))
+
+        if len(mpc.parties) == 3:
+            res = await np_shuffle_3PC(res)
+        else:
+            mpc.random.shuffle(self.sectype, res)
+
+        final_res = []
+        zero_test = await mpc.np_is_zero_public(
+            res[:, -1] - 2
+        )  # Here, we leak the number of non-zero elements in the output matrix
+
+        mask = [i for i, test in enumerate(zero_test) if not test]
+        final_res = res[mask, :]
+        print(await mpc.output(final_res))
+
+        return SparseVector(final_res, sectype=self.sectype, shape=(self.shape[0], 1))
 
     async def dot(self, other):
         if self.shape[1] != other.shape[0]:

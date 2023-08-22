@@ -66,7 +66,11 @@ def int_to_secure_bits(number, sectype, nb_bits):
     return [sectype(int(c)) for c in bitstring][::-1]
 
 
-async def radix_sort(data, key_bitlength, desc=False, already_decomposed=False):
+async def radix_sort(
+    data, key_bitlength, desc=False, already_decomposed=False, keep_bin_keys=False
+):
+    assert not (not already_decomposed and keep_bin_keys)
+
     n, l = data.shape
 
     if already_decomposed:
@@ -97,7 +101,8 @@ async def radix_sort(data, key_bitlength, desc=False, already_decomposed=False):
             res = await reveal_sort(cp_j, data)
 
     if already_decomposed:
-        res = res[:, key_bitlength:]
+        if not keep_bin_keys:
+            res = res[:, key_bitlength:]
 
     if desc:  # Descending order
         return res
