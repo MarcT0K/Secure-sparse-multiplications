@@ -394,21 +394,22 @@ class SparseMatrixRow(SecureMatrix):
                 SecureMatrix.int_to_secure_bits(i, self.sectype, self.row_bit_length)
                 * self._mat[i].shape[0]
             )
-            int_row_ind = self.sectype.array(
-                i * np.ones((other._mat.shape[0], 1), dtype=int)
-            )
             bin_row_ind = mpc.np_reshape(
                 mpc.np_fromlist(bin_row_ind),
                 (len(bin_row_ind) // self.row_bit_length, self.row_bit_length),
             )
+            int_row_ind = self.sectype.array(
+                i * np.ones((self._mat[i].shape[0], 1), dtype=int)
+            )
             ones = self.sectype.array(np.ones((self._mat[i].shape[0], 1), dtype=int))
             curr_row_mat = mpc.np_hstack(
                 (  # We place the column binary representation first to sort based on columns
-                    self._mat[i][:, : self.col_bit_length],
                     ones,
+                    self._mat[i][:, : self.col_bit_length],
+                    self._mat[i][:, -2:-1],  # Integer column indices
                     bin_row_ind,
                     int_row_ind,
-                    self._mat[i][:, -2:-1],
+                    self._mat[i][:, -1:],
                 )
             )
 
@@ -422,6 +423,9 @@ class SparseMatrixRow(SecureMatrix):
             return SparseVector([], self.sectype, shape=(self.shape[0], 1))
 
         zeros_for_vect = self.sectype.array(
+            np.zeros((other._mat.shape[0], 1), dtype=int)
+        )
+        bin_placeholders_for_vect = self.sectype.array(
             np.zeros((other._mat.shape[0], self.row_bit_length), dtype=int)
         )
         placeholder_for_vect = self.sectype.array(
@@ -430,19 +434,17 @@ class SparseMatrixRow(SecureMatrix):
 
         padded_vect = mpc.np_hstack(
             (
-                other._mat[:, : self.col_bit_length],
                 zeros_for_vect,
-                placeholder_for_vect,
+                other._mat[:, : self.col_bit_length],
                 other._mat[:, -2:-1],
+                bin_placeholders_for_vect,
+                placeholder_for_vect,
+                other._mat[:, -1:],
             )
-        )  # We add [size_diff] zero bits to have matrices with the same number of colums
+        )
         # We add an extra zero bit to differentiate the matrix values from the vector values
 
         res = mpc.np_vstack((padded_vect, padded_matrix))
-
-        clear = await mpc.output(res)
-        for i in range(clear.shape[0]):
-            print(clear[i])
 
         ### MULTIPLICATION STEP
         if len(mpc.parties) == 3:
@@ -450,35 +452,42 @@ class SparseMatrixRow(SecureMatrix):
                 res,
                 self.col_bit_length + 1,
                 already_decomposed=True,
+                keep_bin_keys=True,
             )
         else:
             raise NotImplementedError
 
-        clear = await mpc.output(res)
-        for i in range(clear.shape[0]):
-            print(clear[i])
         last_vect_val = self.sectype(0)
-        cond_vect = mpc.np_fromlist(res[:, self.col_bit_length])
+        last_vect_col = self.sectype(-1)
         val_col = []
         for i in range(res.shape[0]):
-            is_vect_elem = 1 - cond_vect[i]
+            # TODO: Fix the condition
+            is_vect_elem = 1 - res[i, 0]
+            same_col = res[i, self.col_bit_length + 1] == last_vect_col
+            mult_cond = same_col * res[i, 0]
+
             last_vect_val = (1 - is_vect_elem) * last_vect_val + is_vect_elem * res[
                 i, -1
             ]
-            val_col.append(res[i, -1] * last_vect_val * (1 - is_vect_elem))
+            last_vect_col = (1 - is_vect_elem) * last_vect_col + is_vect_elem * res[
+                i, self.col_bit_length + 1
+            ]
+            val_col.append(res[i, -1] * last_vect_val * mult_cond)
 
         val_col = mpc.np_reshape(mpc.np_fromlist(val_col), (res.shape[0], 1))
 
-        res = mpc.np_hstack((res[:, :-1], val_col))
-        # We remove all information about the column index of the non-zeros
+        res = mpc.np_hstack(
+            (res[:, 0:1], res[:, self.col_bit_length + 2 : -1], val_col)
+        )
+        # We remove the column indices but keep the differentiating bit
 
-        clear = await mpc.output(res)
-        for i in range(clear.shape[0]):
-            print(clear[i])
         # AGGREGATION STEP
         if len(mpc.parties) == 3:
             res = await radix_sort(
-                res, self.row_bit_length, already_decomposed=True, keep_bin_keys=True
+                res,
+                self.row_bit_length + 1,
+                already_decomposed=True,
+                keep_bin_keys=True,
             )
         else:
             raise NotImplementedError
@@ -493,10 +502,10 @@ class SparseMatrixRow(SecureMatrix):
         for i in range(res.shape[0] - 1):
             col_val[i + 1] = col_val[i + 1] + comp[i] * col_val[i]
         col_i = mpc.np_hstack((col_i, res[-1, 1:2]))
-        col_val = mpc.np_transpose(mpc.np_fromlist(col_val))
-        col_i = mpc.np_transpose(col_i)
+        col_val = mpc.np_reshape(mpc.np_fromlist(col_val), (res.shape[0], 1))
+        col_i = mpc.np_reshape(col_i, (res.shape[0], 1))
 
-        res = mpc.np_transpose(mpc.np_vstack((res[:, -2], col_i, col_val)))
+        res = mpc.np_hstack((res[:, :-2], col_i, col_val))
 
         if len(mpc.parties) == 3:
             res = await np_shuffle_3PC(res)
@@ -505,12 +514,16 @@ class SparseMatrixRow(SecureMatrix):
 
         final_res = []
         zero_test = await mpc.np_is_zero_public(
-            res[:, -1] - 2
+            res[:, -2] + 1
         )  # Here, we leak the number of non-zero elements in the output matrix
+        zero_val_test = await mpc.np_is_zero_public(
+            res[:, -1]
+        )  # TODO: refactor this test?
 
-        mask = [i for i, test in enumerate(zero_test) if not test]
-        final_res = res[mask, :]
-        print(await mpc.output(final_res))
+        mask = [
+            i for i, test in enumerate(zero_test) if not test and not zero_val_test[i]
+        ]
+        final_res = res[mask, 1:]  # We remove the differentiating bit
 
         return SparseVector(final_res, sectype=self.sectype, shape=(self.shape[0], 1))
 
