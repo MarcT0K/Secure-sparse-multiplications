@@ -154,6 +154,21 @@ class SparseVector(SecureMatrix):
             mult_vect = sorted_array[0 : n - 1, 1] * sorted_array[1:n, 1]
             comp_vect = sorted_array[0 : n - 1, 0] == sorted_array[1:n, 0]
             return mpc.np_sum(mult_vect * comp_vect)
+        elif isinstance(other, DenseVector):
+            if self.shape != other.shape:
+                raise ValueError("Incompatible vector size")
+
+            s = self.sectype(0)
+            if not self._mat:
+                return s
+
+            nnz = self._mat.shape[0]
+            for i in range(nnz):
+                sparse_coord = self._mat[i, -2]
+                sparse_val = self._mat[i, -1]
+                s += sparse_val * other._mat[sparse_coord]
+
+            return s
         else:
             raise NotImplementedError
 
