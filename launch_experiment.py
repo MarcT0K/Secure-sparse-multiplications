@@ -214,13 +214,11 @@ def sorting_experiments():
     logger.info("FINISHED ALL SORTING EXPERIMENTS")
 
 
-def dot_product_experiments():
-    logger.info("START DOT PRODUCT EXPERIMENTS")
+def vect_mult_experiments():
+    logger.info("START VECTOR MULTIPLICATION EXPERIMENTS")
     dense_failed = False
     sparse_failed = False
-    for i, j, density in product(
-        range(1, 9), range(1, 10, 2), [0.0001, 0.001, 0.005, 0.01]
-    ):
+    for i, j, density in product(range(1, 9), range(1, 10, 2), [0.0001, 0.001, 0.01]):
         if dense_failed and sparse_failed:
             logger.warning("Both algorithms failed")
             break
@@ -241,7 +239,7 @@ def dot_product_experiments():
             str(density),
         ]
         logger.info(
-            "Dot product experiment: seed=%d, dimensions=%d, density=%.3f",
+            "Vector multiplication experiment: seed=%d, dimensions=%d, density=%.4f",
             seed,
             nb_rows,
             density,
@@ -267,7 +265,83 @@ def dot_product_experiments():
         else:
             logger.warning("Skipped sparse experiments")
 
-    logger.info("FINISHED ALL DOT PRODUCT EXPERIMENTS")
+    logger.info("FINISHED ALL VECTOR MULTIPLICATION EXPERIMENTS")
+
+
+def mat_vect_mult_experiments():
+    logger.info("START MATRIX-VECTOR MULTIPLICATION EXPERIMENTS")
+    dense_failed = False
+    sparse001_failed = False
+    sparse01_failed = False
+    sparse1_failed = False
+
+    for i, j in product(range(2, 7), range(1, 10, 2)):
+        if dense_failed and sparse001_failed and sparse01_failed and sparse1_failed:
+            logger.warning("All algorithms failed")
+            break
+
+        seed = generate_seed()
+        nb_rows = j * 10**i
+        base_args = [
+            "python3",
+            "benchmark.py",
+            "-M3",
+            "--benchmark",
+            "mat_vect_mult",
+            "--seed",
+            str(seed),
+            "--nb-rows",
+            str(nb_rows),
+            "--density",
+        ]
+        logger.info(
+            "Matrix-vector multiplication experiment: seed=%d, dimensions=(%d, %d)",
+            seed,
+            nb_rows,
+            nb_rows,
+        )
+
+        if not dense_failed:
+            subp = Popen(
+                base_args + [str(0.001), "--algo", "dense"],
+                stdout=PIPE,
+                stderr=STDOUT,
+            )
+            dense_failed = track_memory(subp)
+        else:
+            logger.warning("Skipped dense experiments")
+
+        if not sparse001_failed:
+            subp = Popen(
+                base_args + [str(0.0001), "--algo", "sparse"],
+                stdout=PIPE,
+                stderr=STDOUT,
+            )
+            sparse001_failed = track_memory(subp)
+        else:
+            logger.warning("Skipped sparse 0.01 percent experiments")
+
+        if not sparse01_failed:
+            subp = Popen(
+                base_args + [str(0.001), "--algo", "sparse"],
+                stdout=PIPE,
+                stderr=STDOUT,
+            )
+            sparse01_failed = track_memory(subp)
+        else:
+            logger.warning("Skipped sparse 0.1 percent experiments")
+
+        if not sparse1_failed:
+            subp = Popen(
+                base_args + [str(0.01), "--algo", "sparse"],
+                stdout=PIPE,
+                stderr=STDOUT,
+            )
+            sparse1_failed = track_memory(subp)
+        else:
+            logger.warning("Skipped sparse 1 percent experiments")
+
+    logger.info("FINISHED ALL MATRIX-VECTOR MULTIPLICATION EXPERIMENTS")
 
 
 def matmult_experiments():
@@ -275,16 +349,9 @@ def matmult_experiments():
     dense_failed = False
     sparse001_failed = False
     sparse01_failed = False
-    sparse05_failed = False
     sparse1_failed = False
     for i, j in product(range(2, 7), range(1, 10, 2)):
-        if (
-            dense_failed
-            and sparse001_failed
-            and sparse01_failed
-            and sparse05_failed
-            and sparse1_failed
-        ):
+        if dense_failed and sparse001_failed and sparse01_failed and sparse1_failed:
             logger.warning("All algorithms failed")
             break
 
@@ -306,7 +373,7 @@ def matmult_experiments():
             "--density",
         ]
         logger.info(
-            "Matrix multiplication experiment: seed=%d, dimensions=%dx%d",
+            "Matrix multiplication experiment: seed=%d, dimensions=(%d, %d)",
             seed,
             nb_rows,
             nb_cols,
@@ -342,16 +409,6 @@ def matmult_experiments():
         else:
             logger.warning("Skipped sparse 0.1 percent experiments")
 
-        if not sparse05_failed:
-            subp = Popen(
-                base_args + [str(0.005), "--algo", "sparse"],
-                stdout=PIPE,
-                stderr=STDOUT,
-            )
-            sparse05_failed = track_memory(subp)
-        else:
-            logger.warning("Skipped sparse 0.5 percent experiments")
-
         if not sparse1_failed:
             subp = Popen(
                 base_args + [str(0.01), "--algo", "sparse"],
@@ -373,8 +430,9 @@ def main():
     try:
         # sorting_experiments()
         # shuffle_experiments()
-        # dot_product_experiments()
-        matmult_experiments()
+        # vect_mult_experiments()
+        mat_vect_mult_experiments()
+        # matmult_experiments()
     except KeyboardInterrupt:  # To avoid memory leakage
         psutil_proc = psutil.Process(os.getpid())
         for proc in psutil_proc.children(recursive=True):

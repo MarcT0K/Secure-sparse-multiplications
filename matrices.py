@@ -399,6 +399,9 @@ class SparseMatrixRow(SecureMatrix):
     async def _matrix_vector_prod(self, other) -> SparseVector:
         sorting_key_length = self.col_bit_length + 1
 
+        if not other._mat:
+            return SparseVector([], self.sectype, shape=(self.shape[0], 1))
+
         ### NUMPY-LIKE MATRIX PREPARATION (i.e., for parallelized operations)
         padded_matrix = []
         for i in range(self.shape[0]):
@@ -430,12 +433,12 @@ class SparseMatrixRow(SecureMatrix):
 
             padded_matrix.append(curr_row_mat)
 
+        if not padded_matrix:
+            return SparseVector([], self.sectype, shape=(self.shape[0], 1))
+
         padded_matrix = mpc.np_vstack(
             padded_matrix
         )  # We concatenate (vertically) all row matrices
-
-        if not other._mat or padded_matrix is None:
-            return SparseVector([], self.sectype, shape=(self.shape[0], 1))
 
         zeros_for_vect = self.sectype.array(
             np.zeros((other._mat.shape[0], 1), dtype=int)

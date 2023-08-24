@@ -218,8 +218,6 @@ async def benchmark_mat_vector_mult(exp_env, n_dim, density, alg_choice=None):
             z = await sec_x.dot(sec_y)
 
             sparse_nb_non_zeros = len(z._mat)
-            print("Real:", x_sparse @ y_sparse)
-            print(nb_non_zeros, sparse_nb_non_zeros, z._mat)
             assert nb_non_zeros == sparse_nb_non_zeros
 
 
