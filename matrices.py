@@ -168,10 +168,16 @@ class SparseVector(SecureMatrix):
             )
 
             nnz = self._mat.shape[0]
+            unit_matrix = None
             for i in range(nnz):
                 sparse_coord = self._mat[i, -2]
-                sparse_val = self._mat[i, -1]
-                s += sparse_val * dense_vect_list[sparse_coord]
+                unit_vector = mpc.np_unit_vector(sparse_coord, self.shape[0])
+                if unit_matrix is None:
+                    unit_matrix = unit_vector
+                else:
+                    unit_matrix = mpc.np_vstack((unit_matrix, unit_vector))
+            temp = mpc.np_matmul(unit_matrix, other._mat)
+            s = mpc.np_matmul(mpc.np_transpose(temp), self._mat[:, -1:])
             return s
         else:
             raise NotImplementedError
