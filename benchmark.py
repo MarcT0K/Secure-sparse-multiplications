@@ -169,26 +169,26 @@ async def benchmark_mat_vector_mult(exp_env, n_dim, density, alg_choice=None):
     secint = mpc.SecInt(64)
 
     if mpc.pid == 0:
-        x_sparse = scipy.sparse.random(
+        X_sparse = scipy.sparse.random(
             n_dim, n_dim, density=density, dtype=np.int16
         ).astype(int)
         y_sparse = scipy.sparse.random(
             n_dim, 1, density=density, dtype=np.int16
         ).astype(int)
     else:
-        x_sparse = None
+        X_sparse = None
         y_sparse = None
 
-    x_sparse = await mpc.transfer(x_sparse, senders=0)
+    X_sparse = await mpc.transfer(X_sparse, senders=0)
     y_sparse = await mpc.transfer(y_sparse, senders=0)
-    nb_non_zeros = len((x_sparse @ y_sparse).data)
+    nb_non_zeros = len((X_sparse @ y_sparse).data)
 
-    dense_x = x_sparse.astype(int).todense()
+    dense_x = X_sparse.astype(int).todense()
     dense_y = y_sparse.astype(int).todense()
 
     params = {
         "Nb. rows": n_dim,
-        "Nb. columns": 1,
+        "Nb. columns": n_dim,
         "Density": density,
     }
 
@@ -210,7 +210,7 @@ async def benchmark_mat_vector_mult(exp_env, n_dim, density, alg_choice=None):
     if alg_choice in ["*", "sparse"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = SparseMatrixRow(x_sparse, secint)
+            sec_x = SparseMatrixRow(X_sparse, secint)
             sec_y = SparseVector(y_sparse, secint)
 
         params["Algorithm"] = "Sparse"
@@ -233,15 +233,15 @@ async def benchmark_sparse_sparse_mat_mult(
         f"Matrix-matrix multiplication benchmark: dimensions={n_dim}x{m_dim}, density={density}, algorithm={alg_choice}"
     )
     if mpc.pid == 0:
-        x_sparse = scipy.sparse.random(
+        X_sparse = scipy.sparse.random(
             n_dim, m_dim, density=density, dtype=np.int16
         ).astype(int)
     else:
-        x_sparse = None
+        X_sparse = None
 
-    x_sparse = await mpc.transfer(x_sparse, senders=0)
-    nb_non_zeros = len((x_sparse.T @ x_sparse).data)
-    dense_mat = x_sparse.todense().astype(int)
+    X_sparse = await mpc.transfer(X_sparse, senders=0)
+    nb_non_zeros = len((X_sparse.T @ X_sparse).data)
+    dense_mat = X_sparse.todense().astype(int)
 
     params = {
         "Nb. rows": n_dim,
@@ -268,8 +268,8 @@ async def benchmark_sparse_sparse_mat_mult(
     if alg_choice in ["sparse", "*"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = SparseMatrixColumn(x_sparse.transpose(), secint)
-            sec_y = SparseMatrixRow(x_sparse, secint)
+            sec_x = SparseMatrixColumn(X_sparse.transpose(), secint)
+            sec_y = SparseMatrixRow(X_sparse, secint)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):

@@ -422,6 +422,30 @@ def matmult_experiments():
     logger.info("FINISHED ALL MATRIX MULTIPLICATION EXPERIMENTS")
 
 
+def clean_csv():
+    """Removes from the CSV files all lines for experiments that crashed during computation times.
+
+    Hence, we remove the isolated secret-sharing results."""
+    for fname in glob.glob("*.csv"):
+        with open(fname, "r", encoding="utf-8") as csv_file:
+            lines = csv_file.readlines()
+
+        with open(fname + ".old", "w", encoding="utf-8") as archive_file:
+            archive_file.writelines(fname)  # Keep the unfiltered version
+
+        filtered_lines = [
+            lines[i]
+            for i in range(len(lines) - 1)
+            if not ("sharing" in lines[i] and "sharing" in lines[i + 1])
+        ]
+
+        if "sharing" not in lines[-1]:
+            filtered_lines.append(lines[-1])
+
+        with open(fname, "w", encoding="utf-8") as csv_file:
+            csv_file.writelines(filtered_lines)
+
+
 def main():
     random.seed(74589312)
     archive_experiment_results()
@@ -438,6 +462,8 @@ def main():
         for proc in psutil_proc.children(recursive=True):
             proc.kill()
         raise
+
+    clean_csv()
 
 
 if __name__ == "__main__":

@@ -297,7 +297,9 @@ def generate_sorting_experiment():
 if __name__ == "__main__":
     generate_sorting_experiment()
     generate_shuffle_experiment()
-    gen_all_figures("dot_product", "rows", "Vector length")
+    gen_all_figures("vect_mult", "rows", "Vector length")
     gen_all_figures("mat_mult", "columns", "Number of columns", until_overflow=True)
-    gen_all_figures("mat_mult_large", "columns", "Number of columns")
+    gen_all_figures(
+        "mat_vect_mult", "columns", "Number of columns", until_overflow=True
+    )
     plt.close("all")
