@@ -120,9 +120,9 @@ async def benchmark_vect_mult(exp_env, n_dim, density, alg_choice=None):
     x_sparse = await mpc.transfer(x_sparse, senders=0)
     y_sparse = await mpc.transfer(y_sparse, senders=0)
 
-    dense_x = x_sparse.astype(int).todense()
-    dense_y = y_sparse.astype(int).todense()
-    real_res = dense_x.transpose().dot(dense_y)[0, 0]
+    x_dense = x_sparse.astype(int).todense()
+    y_dense = y_sparse.astype(int).todense()
+    real_res = x_dense.transpose().dot(y_dense)[0, 0]
     print("Real result:", real_res)
 
     params = {
@@ -134,16 +134,16 @@ async def benchmark_vect_mult(exp_env, n_dim, density, alg_choice=None):
     if alg_choice in ["*", "dense"]:
         params["Algorithm"] = "Dense sharing"
         async with exp_env.benchmark(params):
-            sec_dense_x = DenseVector(dense_x.transpose(), sectype=secint)
-            sec_dense_y = DenseVector(dense_y, sectype=secint)
+            sec_x_dense = DenseVector(x_dense.transpose(), sectype=secint)
+            sec_y_dense = DenseVector(y_dense, sectype=secint)
 
         params["Algorithm"] = "Dense"
         async with exp_env.benchmark(params):
-            z = sec_dense_x.dot(sec_dense_y)
+            z = sec_x_dense.dot(sec_y_dense)
             dense_res = await mpc.output(z)
             assert dense_res == real_res
 
-        del dense_x, dense_y
+        del x_dense, y_dense
 
     if alg_choice in ["*", "sparse"]:
         params["Algorithm"] = "Sparse sharing"
@@ -152,6 +152,84 @@ async def benchmark_vect_mult(exp_env, n_dim, density, alg_choice=None):
             sec_y = SparseVector(y_sparse, secint)
 
         params["Algorithm"] = "Sparse"
+        async with exp_env.benchmark(params):
+            z = await sec_x.dot(sec_y)
+            sparse_res = await mpc.output(z)
+            assert sparse_res == real_res
+
+
+async def benchmark_sparse_dense_vect_mult(exp_env, n_dim, density, alg_choice=None):
+    if alg_choice is None:
+        alg_choice = "*"
+
+    assert alg_choice in ["*", "dense", "sparse", "sparse-dense"]
+
+    print(
+        f"Vector multiplication benchmark: dimension={n_dim}, density={density} algorithm={alg_choice}"
+    )
+    secint = mpc.SecInt(64)
+
+    if mpc.pid == 0:
+        x_sparse = scipy.sparse.random(
+            n_dim, 1, density=density, dtype=np.int16
+        ).astype(int)
+        y_sparse = scipy.sparse.random(n_dim, 1, density=1, dtype=np.int16).astype(int)
+    else:
+        x_sparse = None
+        y_sparse = None
+
+    x_sparse = await mpc.transfer(x_sparse, senders=0)
+    y_sparse = await mpc.transfer(y_sparse, senders=0)
+
+    x_dense = x_sparse.astype(int).todense()
+    y_dense = y_sparse.astype(int).todense()
+    real_res = x_dense.transpose().dot(y_dense)[0, 0]
+    print("Real result:", real_res)
+
+    params = {
+        "Nb. rows": n_dim,
+        "Nb. columns": 1,
+        "Density": density,
+    }
+
+    if alg_choice in ["*", "dense"]:
+        params["Algorithm"] = "Dense sharing"
+        async with exp_env.benchmark(params):
+            sec_x_dense = DenseVector(x_dense.transpose(), sectype=secint)
+
+        sec_y_dense = DenseVector(y_dense, sectype=secint)
+
+        params["Algorithm"] = "Dense"
+        async with exp_env.benchmark(params):
+            z = sec_x_dense.dot(sec_y_dense)
+            dense_res = await mpc.output(z)
+            assert dense_res == real_res
+
+        del x_dense, y_dense
+
+    if alg_choice in ["*", "sparse"]:
+        params["Algorithm"] = "Sparse sharing"
+        async with exp_env.benchmark(params):
+            sec_x = SparseVector(x_sparse, secint)
+
+        sec_y = SparseVector(y_sparse, secint)
+
+        params["Algorithm"] = "Sparse"
+        async with exp_env.benchmark(params):
+            z = await sec_x.dot(sec_y)
+            sparse_res = await mpc.output(z)
+            assert sparse_res == real_res
+
+    if alg_choice in ["*", "sparse-dense"]:
+        params["Algorithm"] = "Sparse-dense sharing"
+        async with exp_env.benchmark(params):
+            sec_x = SparseVector(x_sparse, secint)
+
+        sec_y = DenseVector(y_dense, secint)
+        # We assume the dense vector is reused for multiple operations
+        # So we only measure the sharing cost of the first vector
+
+        params["Algorithm"] = "Sparse-dense"
         async with exp_env.benchmark(params):
             z = await sec_x.dot(sec_y)
             sparse_res = await mpc.output(z)
@@ -183,8 +261,8 @@ async def benchmark_mat_vector_mult(exp_env, n_dim, density, alg_choice=None):
     y_sparse = await mpc.transfer(y_sparse, senders=0)
     nb_non_zeros = len((X_sparse @ y_sparse).data)
 
-    dense_x = X_sparse.astype(int).todense()
-    dense_y = y_sparse.astype(int).todense()
+    x_dense = X_sparse.astype(int).todense()
+    y_dense = y_sparse.astype(int).todense()
 
     params = {
         "Nb. rows": n_dim,
@@ -195,17 +273,17 @@ async def benchmark_mat_vector_mult(exp_env, n_dim, density, alg_choice=None):
     if alg_choice in ["*", "dense"]:
         params["Algorithm"] = "Dense sharing"
         async with exp_env.benchmark(params):
-            sec_dense_x = DenseMatrix(dense_x, sectype=secint)
-            sec_dense_y = DenseVector(dense_y, sectype=secint)
+            sec_x_dense = DenseMatrix(x_dense, sectype=secint)
+            sec_y_dense = DenseVector(y_dense, sectype=secint)
 
         params["Algorithm"] = "Dense"
         async with exp_env.benchmark(params):
-            z = sec_dense_x.dot(sec_dense_y)
+            z = sec_x_dense.dot(sec_y_dense)
             z_clear = await mpc.output(z._mat)
             dense_nb_non_zeros = (z_clear != 0).sum()
             assert nb_non_zeros == dense_nb_non_zeros
 
-        del dense_x, dense_y
+        del x_dense, y_dense
 
     if alg_choice in ["*", "sparse"]:
         params["Algorithm"] = "Sparse sharing"
@@ -409,6 +487,18 @@ async def main():
                 density=args["density"],
                 alg_choice=args["algo"],
             )
+    elif args["benchmark"] == "sparse_dense_vect_mult":
+        check_args(args, ["nb_rows", "density"])
+        async with ExperimentalEnvironment(
+            args["benchmark"] + ".csv", CSV_FIELDS, seed=args.get("seed")
+        ) as exp_env:
+            await benchmark_sparse_dense_vect_mult(
+                exp_env,
+                n_dim=args["nb_rows"],
+                density=args["density"],
+                alg_choice=args["algo"],
+            )
+
     elif args["benchmark"] == "mat_vect_mult":
         check_args(args, ["nb_rows", "density"])
         async with ExperimentalEnvironment(

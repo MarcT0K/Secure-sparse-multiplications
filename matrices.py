@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import scipy.sparse
 from mpyc.runtime import mpc
+from mpyc.seclists import seclist
 
 from radix_sort import radix_sort
 from resharing import np_shuffle_3PC
@@ -159,15 +160,18 @@ class SparseVector(SecureMatrix):
                 raise ValueError("Incompatible vector size")
 
             s = self.sectype(0)
-            if not self._mat:
+            if not self._mat or not other._mat:
                 return s
+
+            dense_vect_list = seclist(
+                mpc.np_tolist(mpc.np_transpose(other._mat))[0], self.sectype
+            )
 
             nnz = self._mat.shape[0]
             for i in range(nnz):
                 sparse_coord = self._mat[i, -2]
                 sparse_val = self._mat[i, -1]
-                s += sparse_val * other._mat[sparse_coord]
-
+                s += sparse_val * dense_vect_list[sparse_coord]
             return s
         else:
             raise NotImplementedError
