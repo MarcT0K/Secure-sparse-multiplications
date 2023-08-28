@@ -90,43 +90,6 @@ async def partial_reshare(x, ignore=None):
     return y
 
 
-def permute(input_list, seed, inv=False):
-    random.seed(seed)
-    res = input_list.copy()
-    permutation = list(range(len(input_list)))
-    random.shuffle(permutation)
-
-    if inv:
-        inv = np.empty_like(permutation)
-        inv[permutation] = np.arange(len(inv), dtype=inv.dtype)
-        permutation = inv
-
-    res = [res[i] for i in permutation]
-    return res
-
-
-async def shuffle_3PC(input_list):
-    assert len(mpc.parties) == 3
-    output_list = input_list.copy()
-
-    # Sharing random seeds between pairs of parties
-    seeds = [None] * 3
-    self_seed = int.from_bytes(os.urandom(16), "big")
-    other_seed = await mpc.transfer(
-        self_seed, sender_receivers=[(0, 1), (1, 2), (2, 0)]
-    )
-    seeds[(mpc.pid - 1) % 3] = self_seed
-    seeds[(mpc.pid + 1) % 3] = other_seed[0]
-
-    # Permuting the lists
-    for i in range(3):
-        if mpc.pid != i:
-            output_list = permute(output_list, seeds[i])
-
-        output_list = partial_reshare(output_list, ignore=[i])
-    return output_list
-
-
 def np_permute(input_list, seed, axis, inv=False):
     random.seed(seed)
     permutation = list(range(len(input_list)))
@@ -137,8 +100,7 @@ def np_permute(input_list, seed, axis, inv=False):
         inv[permutation] = np.arange(len(inv), dtype=inv.dtype)
         permutation = inv
 
-    res = mpc.np_copy(input_list)
-    res = mpc.np_update(res, permutation, input_list)
+    res = input_list[permutation]
     return res
 
 
@@ -175,13 +137,6 @@ async def test():
 
     # x = [[secint(i), secint(i)] for i in range(100)]
     x = [secint(i) for i in range(100)]
-
-    start = datetime.now()
-    for i in range(100):
-        s = await shuffle_3PC(x)
-        assert len(set(await mpc.output(s))) == len(x)
-    end = datetime.now()
-    print("3PC shuffle runtime: ", (end - start).total_seconds() / 100)
 
     start = datetime.now()
     for i in range(100):
