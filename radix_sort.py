@@ -9,7 +9,6 @@ import random
 from mpyc.runtime import mpc
 
 from resharing import np_shuffle_3PC
-from shuffle import np_shuffle
 
 
 async def bin_vec_to_B(bin_vect):
@@ -47,7 +46,7 @@ async def reveal_sort(keys, data):
         )
 
     if len(mpc.parties) != 3:
-        await np_shuffle(merged)
+        raise NotImplementedError
     else:
         merged = await np_shuffle_3PC(merged)
 
