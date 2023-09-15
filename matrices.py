@@ -21,7 +21,7 @@ class SecureMatrix:
 
     def __init__(self, sectype=None, shape=None):
         if sectype is None:
-            self.sectype = mpc.SecInt(64)
+            self.sectype = mpc.SecFxp(64)
         else:
             self.sectype = sectype
 
@@ -122,8 +122,9 @@ class SparseVector(SecureMatrix):
                         i, self.sectype, self.row_bit_length
                     )
                 )
-                self._mat.append(SecureMatrix.to_secint(self.sectype, i))
-                self._mat.append(SecureMatrix.to_secint(self.sectype, v))
+                print(float(i), type(i))
+                self._mat.append(self.sectype(int(i)))
+                self._mat.append(self.sectype(float(v)))
 
             if self._mat:
                 np_mat = mpc.np_reshape(
@@ -146,7 +147,11 @@ class SparseVector(SecureMatrix):
             if not self._mat or not other._mat:
                 return self.sectype(0)
 
-            unsorted = mpc.np_vstack((self._mat, other._mat))
+            print("_mat", self._mat.integral, other._mat.integral)
+            unsorted2 = mpc.np_vstack((self._mat, other._mat))
+            print(unsorted2.integral, unsorted2.shape)
+            unsorted = mpc.np_column_stack((self._mat, other._mat))
+            print(unsorted.integral, unsorted.shape)
             sorted_array = await radix_sort(
                 unsorted, self.row_bit_length, already_decomposed=True
             )
@@ -407,8 +412,6 @@ class SparseMatrixRow(SecureMatrix):
         ]
 
     async def _matrix_vector_prod(self, other) -> SparseVector:
-        sorting_key_length = self.col_bit_length + 1
-
         if not other._mat:
             return SparseVector([], self.sectype, shape=(self.shape[0], 1))
 
@@ -489,7 +492,6 @@ class SparseMatrixRow(SecureMatrix):
         last_vect_col = self.sectype(-1)
         val_col = []
         for i in range(res.shape[0]):
-            # TODO: Fix the condition
             is_vect_elem = 1 - res[i, 0]
             same_col = res[i, self.col_bit_length + 1] == last_vect_col
             mult_cond = same_col * res[i, 0]

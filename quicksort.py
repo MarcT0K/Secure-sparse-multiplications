@@ -8,29 +8,8 @@ import random
 
 from mpyc.runtime import mpc
 
-from resharing import np_shuffle_3PC, shuffle_3PC
+from resharing import np_shuffle_3PC
 from shuffle import np_shuffle
-
-
-async def quicksort(sec_list, sectype, rec_call=False, key=None):
-    if not rec_call:
-        start = datetime.datetime.now()
-        mpc.random.shuffle(sectype, sec_list)
-        # if len(mpc.parties) == 3:
-        #     sec_list = await shuffle_3PC(sec_list)
-        # else:
-        #     mpc.random.shuffle(sectype, sec_list)
-        await mpc.barrier()
-        end = datetime.datetime.now()
-        print("shuffle time:", (end - start).total_seconds())
-
-    if 1 < len(sec_list):
-        p, curr_list = await partition(sec_list, key=key)
-        left_part = await quicksort(curr_list[:p], sectype, True, key=key)
-        right_part = await quicksort(curr_list[p + 1 :], sectype, True, key=key)
-        return left_part + [curr_list[p]] + right_part
-    else:
-        return sec_list
 
 
 async def partition(sec_list, key=None):

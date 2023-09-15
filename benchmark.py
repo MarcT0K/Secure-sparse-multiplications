@@ -104,15 +104,11 @@ async def benchmark_vect_mult(exp_env, n_dim, density, alg_choice=None):
     print(
         f"Vector multiplication benchmark: dimension={n_dim}, density={density} algorithm={alg_choice}"
     )
-    secint = mpc.SecInt(64)
+    secfxp = mpc.SecFxp(64)
 
     if mpc.pid == 0:
-        x_sparse = scipy.sparse.random(
-            n_dim, 1, density=density, dtype=np.int16
-        ).astype(int)
-        y_sparse = scipy.sparse.random(
-            n_dim, 1, density=density, dtype=np.int16
-        ).astype(int)
+        x_sparse = scipy.sparse.random(n_dim, 1, density=density)
+        y_sparse = scipy.sparse.random(n_dim, 1, density=density)
     else:
         x_sparse = None
         y_sparse = None
@@ -120,8 +116,8 @@ async def benchmark_vect_mult(exp_env, n_dim, density, alg_choice=None):
     x_sparse = await mpc.transfer(x_sparse, senders=0)
     y_sparse = await mpc.transfer(y_sparse, senders=0)
 
-    x_dense = x_sparse.astype(int).todense()
-    y_dense = y_sparse.astype(int).todense()
+    x_dense = x_sparse.todense()
+    y_dense = y_sparse.todense()
     real_res = x_dense.transpose().dot(y_dense)[0, 0]
     print("Real result:", real_res)
 
@@ -134,28 +130,29 @@ async def benchmark_vect_mult(exp_env, n_dim, density, alg_choice=None):
     if alg_choice in ["*", "dense"]:
         params["Algorithm"] = "Dense sharing"
         async with exp_env.benchmark(params):
-            sec_x_dense = DenseVector(x_dense.transpose(), sectype=secint)
-            sec_y_dense = DenseVector(y_dense, sectype=secint)
+            sec_x_dense = DenseVector(x_dense.transpose(), sectype=secfxp)
+            sec_y_dense = DenseVector(y_dense, sectype=secfxp)
 
         params["Algorithm"] = "Dense"
         async with exp_env.benchmark(params):
             z = sec_x_dense.dot(sec_y_dense)
             dense_res = await mpc.output(z)
-            assert dense_res == real_res
+            assert abs(dense_res - real_res) < 10 ** (-5)
 
         del x_dense, y_dense
 
     if alg_choice in ["*", "sparse"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = SparseVector(x_sparse, secint)
-            sec_y = SparseVector(y_sparse, secint)
+            sec_x = SparseVector(x_sparse, secfxp)
+            sec_y = SparseVector(y_sparse, secfxp)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):
             z = await sec_x.dot(sec_y)
             sparse_res = await mpc.output(z)
-            assert sparse_res == real_res
+            print(sparse_res, real_res)
+            assert abs(sparse_res - real_res) < 10 ** (-5)
 
 
 async def benchmark_sparse_dense_vect_mult(exp_env, n_dim, density, alg_choice=None):
