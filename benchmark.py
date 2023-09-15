@@ -16,10 +16,7 @@ from matrices import (
     SparseMatrixRow,
     SparseVector,
 )
-from quicksort import parallel_quicksort
-from radix_sort import radix_sort
-from resharing import np_shuffle_3PC
-from shuffle import np_shuffle
+
 
 CSV_FIELDS = [
     "Timestamp",
@@ -357,107 +354,6 @@ async def benchmark_sparse_sparse_mat_mult(
         assert nb_non_zeros == sparse_nb_non_zeros
 
 
-async def benchmark_oblivious_shuffle(exp_env, n_dim, alg_choice=None):
-    if alg_choice is None:
-        alg_choice = "*"
-    assert alg_choice in ["*", "MPyC", "3PC"]
-
-    print(f"Oblivious shuffle benchmark: dimensions={n_dim}, algorithm={alg_choice}")
-
-    secint = mpc.SecInt(64)
-    if mpc.pid == 0:
-        rand_list = [random.randint(0, 2**62) for _ in range(n_dim)]
-    else:
-        rand_list = [0] * n_dim
-
-    rand_list = mpc.np_fromlist([mpc.input(secint(i), senders=0) for i in rand_list])
-    init_list = await mpc.output(rand_list)
-
-    if alg_choice in ["*", "MPyC"]:
-        params = {
-            "Algorithm": "MPyC shuffle",
-            "Nb. rows": n_dim,
-        }
-        async with exp_env.benchmark(params):
-            await np_shuffle(rand_list)
-            new_list = await mpc.output(rand_list)
-            assert (new_list != init_list).any()
-            assert set(new_list) == set(init_list)
-
-    if alg_choice in ["*", "3PC"]:
-        params = {
-            "Algorithm": "3PC shuffle",
-            "Nb. rows": n_dim,
-        }
-        async with exp_env.benchmark(params):
-            z = await np_shuffle_3PC(rand_list)
-            new_list = await mpc.output(z)
-            assert (new_list != init_list).any()
-            assert set(new_list) == set(init_list)
-
-
-async def benchmark_oblivious_sorting(exp_env, n_dim, key_bit_length, alg_choice=None):
-    if alg_choice is None:
-        alg_choice = "*"
-    assert alg_choice in ["*", "quick", "radix", "batcher"]
-
-    print(
-        f"Oblivious sorting benchmark: dimensions={n_dim}, algorithm={alg_choice}, Key bit length={key_bit_length}"
-    )
-
-    secint = mpc.SecInt(64)
-    if mpc.pid == 0:
-        rand_list = [random.randint(0, 2**key_bit_length) for _ in range(n_dim)]
-    else:
-        rand_list = [0] * n_dim
-
-    rand_list = mpc.input(mpc.np_fromlist([secint(i) for i in rand_list]), senders=0)
-    init_list = await mpc.output(rand_list)
-
-    params = {
-        "Key bit length": key_bit_length,
-        "Nb. rows": n_dim,
-    }
-
-    if alg_choice in ["*", "batcher"]:
-        params["Algorithm"] = "Batcher sort"
-
-        async with exp_env.benchmark(params):
-            sorted_list = mpc.np_sort(rand_list)
-            new_list = await mpc.output(sorted_list)
-            assert (new_list == np.sort(init_list)).all()
-
-    if alg_choice in ["*", "quick"]:
-        params["Algorithm"] = "Quicksort"
-
-        async with exp_env.benchmark(params):
-            sorted_list = await parallel_quicksort(rand_list)
-            new_list = await mpc.output(sorted_list)
-            assert (new_list == np.sort(init_list)).all()
-
-    if alg_choice in ["*", "radix"]:
-        params["Algorithm"] = "Radix sort"
-
-        nb_bits = int(math.log(max(init_list), 2)) + 1
-
-        decomp_list = mpc.np_vstack(
-            [
-                mpc.np_fromlist(
-                    SparseVector.int_to_secure_bits(r, secint, nb_bits) + [secint(r)]
-                )
-                for r in init_list
-            ]
-        )
-
-        decomp_list = mpc.input(decomp_list, senders=0)
-        async with exp_env.benchmark(params):
-            sorted_list = await radix_sort(
-                decomp_list, key_bitlength=nb_bits, already_decomposed=True
-            )
-            new_list = await mpc.output(sorted_list.T)
-            assert (new_list == np.sort(init_list)).all()
-
-
 def check_args(args, fields):
     for field in fields:
         if args[field] is None:
@@ -470,7 +366,6 @@ async def main():
     parser.add_argument("--nb-rows", type=int)
     parser.add_argument("--nb-cols", type=int)
     parser.add_argument("--density", type=float)
-    parser.add_argument("--sorting-bit-length", type=int)
     parser.add_argument("--benchmark", required=True)
     parser.add_argument("--algo")
     args, _rest = parser.parse_known_args()
@@ -520,27 +415,6 @@ async def main():
                 n_dim=args["nb_rows"],
                 m_dim=args["nb_cols"],
                 density=args["density"],
-                alg_choice=args["algo"],
-            )
-    elif args["benchmark"] == "shuffle":
-        check_args(args, ["nb_rows"])
-        async with ExperimentalEnvironment(
-            args["benchmark"] + ".csv", CSV_FIELDS, seed=args.get("seed")
-        ) as exp_env:
-            await benchmark_oblivious_shuffle(
-                exp_env, n_dim=args["nb_rows"], alg_choice=args["algo"]
-            )
-    elif args["benchmark"] == "sort":
-        check_args(args, ["nb_rows", "sorting_bit_length"])
-        async with ExperimentalEnvironment(
-            args["benchmark"] + ".csv",
-            CSV_FIELDS + ["Key bit length"],
-            seed=args.get("seed"),
-        ) as exp_env:
-            await benchmark_oblivious_sorting(
-                exp_env,
-                n_dim=args["nb_rows"],
-                key_bit_length=args["sorting_bit_length"],
                 alg_choice=args["algo"],
             )
     else:
