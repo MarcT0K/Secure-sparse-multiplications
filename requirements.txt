@@ -4,6 +4,7 @@ numpy
 gmpy2
 tqdm
 matplotlib
+sklearn
 pandas
 psutil
 colorlog
