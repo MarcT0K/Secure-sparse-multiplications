@@ -9,7 +9,6 @@ from mpyc.seclists import seclist
 
 from radix_sort import radix_sort
 from resharing import np_shuffle_3PC
-from sortable_tuple import SortableTuple
 
 SparseMatrixListType = List[List[int]]
 ScipySparseMatType = scipy.sparse._coo.coo_matrix
@@ -219,23 +218,6 @@ class SparseMatrixCOO(SecureMatrix):
             raise ValueError("Can only multiply SparseMatrixCOO with SparseMatrixCOO")
 
         # TODO: execute either multiply-then-sort or sort-then-multiply depending on the sparsity rate
-
-    def __eq__(self, other):
-        if not isinstance(other, SparseMatrixCOO):
-            raise ValueError("Can only compare SparseMatrixCOO with SparseMatrixCOO")
-        if len(self._mat) != len(other._mat):
-            return self.sectype(0)
-        mat1 = mpc.sorted(self._mat, key=SortableTuple)
-        mat2 = mpc.sorted(other._mat, key=SortableTuple)
-        res = self.sectype(1)
-        for i in range(len(self._mat)):
-            res = (
-                res
-                & (mat1[i][0] == mat2[i][0])
-                & (mat1[i][1] == mat2[i][1])
-                & (mat1[i][2] == mat2[i][2])
-            )
-        return res
 
     def __ne__(self, other):
         return ~(self.__eq__(other))
