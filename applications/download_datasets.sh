@@ -12,4 +12,6 @@ unzip BX-CSV-Dump.zip
 rm BX-Books.csv BX-Users.csv BX-CSV-Dump.zip
 
 # Access log application
-wget https://raw.githubusercontent.com/pyduan/amazonaccess/master/data/train.csv > amazon.csv
+wget https://raw.githubusercontent.com/pyduan/amazonaccess/master/data/train.csv
+mv train.csv amazon.csv
+

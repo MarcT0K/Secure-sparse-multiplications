@@ -53,7 +53,7 @@ async def reveal_sort(keys, data):
     plaintext_keys = await mpc.output(merged[:, 0])
 
     # NB: In the radix sort, the plaintext keys are already the indices
-    sorted_indices = [i for i in plaintext_keys]
+    sorted_indices = [int(i) for i in plaintext_keys]
 
     sorted_data = mpc.np_copy(merged)
     sorted_data = mpc.np_update(sorted_data, sorted_indices, merged)
@@ -107,33 +107,3 @@ async def radix_sort(
         return res
 
     return res[::-1, :]
-
-
-async def main():
-    await mpc.start()
-    sectype = mpc.SecInt(64)
-    if mpc.pid == 0:
-        rand_list = [random.randint(0, 2**32) for _ in range(1000)]
-    else:
-        rand_list = []
-
-    rand_list = await mpc.transfer(rand_list, senders=0)
-
-    nb_bits = int(math.log(max(rand_list), 2)) + 1
-
-    l = mpc.np_vstack(
-        [
-            mpc.np_fromlist(int_to_secure_bits(r, sectype, nb_bits) + [sectype(r)])
-            for r in rand_list
-        ]
-    )
-
-    print("INIT:", await mpc.output(l))
-
-    s = await radix_sort(l, nb_bits, already_decomposed=True)
-    print(await mpc.output(s))
-    await mpc.shutdown()
-
-
-if __name__ == "__main__":
-    mpc.run(main())

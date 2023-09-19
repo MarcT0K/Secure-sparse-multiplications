@@ -20,7 +20,7 @@ class SecureMatrix:
 
     def __init__(self, sectype=None, shape=None):
         if sectype is None:
-            self.sectype = mpc.SecInt(64)
+            self.sectype = mpc.SecFxp(64)
         else:
             self.sectype = sectype
 
@@ -34,10 +34,6 @@ class SecureMatrix:
     def int_to_secure_bits(number, sectype, nb_bits):
         bitstring = format(number, f"0{nb_bits}b")
         return [sectype(int(c)) for c in bitstring][::-1]
-
-    @staticmethod
-    def to_secint(sectype, x):  # TODO: replace this?
-        return sectype(int(x))
 
     @abstractmethod
     def dot(self, other):
@@ -121,8 +117,8 @@ class SparseVector(SecureMatrix):
                         i, self.sectype, self.row_bit_length
                     )
                 )
-                self._mat.append(SecureMatrix.to_secint(self.sectype, i))
-                self._mat.append(SecureMatrix.to_secint(self.sectype, v))
+                self._mat.append(self.sectype(int(i)))
+                self._mat.append(self.sectype(v))
 
             if self._mat:
                 np_mat = mpc.np_reshape(
@@ -192,16 +188,15 @@ class SparseMatrixCOO(SecureMatrix):
         sectype=None,
         shape=None,
     ):
-        # https://stackoverflow.com/questions/4319014/iterating-through-a-scipy-sparse-vector-or-matrix
         if isinstance(sparse_mat, ScipySparseMatType):
             super().__init__(sectype, sparse_mat.shape)
             self._mat = []
             for i, j, v in zip(sparse_mat.row, sparse_mat.col, sparse_mat.data):
                 self._mat.append(
                     [
-                        SecureMatrix.to_secint(self.sectype, i),
-                        SecureMatrix.to_secint(self.sectype, j),
-                        SecureMatrix.to_secint(self.sectype, v),
+                        self.sectype(int(i)),
+                        self.sectype(int(j)),
+                        self.sectype(v),
                     ]
                 )
         elif isinstance(sparse_mat, list):
@@ -243,8 +238,8 @@ class SparseMatrixColumn(SecureMatrix):
             self._mat[j] += SecureMatrix.int_to_secure_bits(
                 i, self.sectype, self.row_bit_length
             ) + [
-                SecureMatrix.to_secint(self.sectype, i),
-                SecureMatrix.to_secint(self.sectype, v),
+                self.sectype(int(i)),
+                self.sectype(v),
             ]
 
         self._mat = [
@@ -368,8 +363,8 @@ class SparseMatrixRow(SecureMatrix):
             self._mat[i] += SecureMatrix.int_to_secure_bits(
                 j, self.sectype, self.col_bit_length
             ) + [
-                SecureMatrix.to_secint(self.sectype, j),
-                SecureMatrix.to_secint(self.sectype, v),
+                self.sectype(int(j)),
+                self.sectype(v),
             ]
 
         self._mat = [
