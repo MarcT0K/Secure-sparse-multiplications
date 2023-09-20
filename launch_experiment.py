@@ -400,12 +400,10 @@ def main():
     setup_logger()
 
     try:
-        # sorting_experiments()
-        # shuffle_experiments()
-        # vect_mult_experiments()
+        vect_mult_experiments()
         sparse_dense_vect_mult_experiments()
-        # mat_vect_mult_experiments()
-        # matmult_experiments()
+        mat_vect_mult_experiments()
+        matmult_experiments()
     except KeyboardInterrupt:  # To avoid memory leakage
         psutil_proc = psutil.Process(os.getpid())
         for proc in psutil_proc.children(recursive=True):

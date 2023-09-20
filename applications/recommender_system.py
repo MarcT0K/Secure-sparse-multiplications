@@ -3,6 +3,8 @@ import scipy.sparse
 
 from mpyc.runtime import mpc
 
+from ..matrices import SparseMatrixRow, SparseVector
+
 
 def extract_dataset():
     ratings = pd.read_csv(
@@ -28,6 +30,10 @@ def extract_dataset():
         sparse_mat[entry[4], entry[5]] = entry[3] + 1
 
     return sparse_mat, user_to_index, isbn_to_index
+
+
+def inference(model: SparseMatrixRow, input: SparseVector):
+    ...
 
 
 def experiment():
