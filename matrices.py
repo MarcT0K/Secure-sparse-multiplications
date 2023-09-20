@@ -83,6 +83,22 @@ class DenseVector(DenseMatrix):
             res = super().dot(other)
             assert res.shape == (1, 1)
             return res.get(0, 0)
+        elif isinstance(other, SparseVector):
+            s = self.sectype(0)
+            if other.nnz == 0:
+                return s
+
+            unit_matrix = None
+            for i in range(other.nnz):
+                sparse_coord = other._mat[i, -2]
+                unit_vector = mpc.np_unit_vector(sparse_coord, other.shape[0])
+                if unit_matrix is None:
+                    unit_matrix = unit_vector
+                else:
+                    unit_matrix = mpc.np_vstack((unit_matrix, unit_vector))
+            temp = mpc.np_matmul(unit_matrix, self._mat)
+            s = mpc.np_matmul(mpc.np_transpose(temp), other._mat[:, -1:])
+            return s
         else:
             raise NotImplementedError
 
@@ -117,11 +133,14 @@ class SparseVector(SecureMatrix):
             raise ValueError("Input must be a vector")
 
     async def dot(self, other):
-        if isinstance(other, SparseVector):
-            if self.shape != other.shape:
-                raise ValueError("Incompatible vector size")
+        if self.shape != other.shape:
+            raise ValueError("Incompatible vector size")
 
-            if not self._mat or not other._mat:
+        if self.nnz == 0:
+            return self.sectype(0)
+
+        if isinstance(other, SparseVector):
+            if other.nnz == 0:
                 return self.sectype(0)
 
             unsorted = mpc.np_vstack((self._mat, other._mat))
@@ -134,29 +153,7 @@ class SparseVector(SecureMatrix):
             comp_vect = sorted_array[0 : n - 1, 0] == sorted_array[1:n, 0]
             return mpc.np_sum(mult_vect * comp_vect)
         elif isinstance(other, DenseVector):
-            if self.shape != other.shape:
-                raise ValueError("Incompatible vector size")
-
-            s = self.sectype(0)
-            if not self._mat or not other._mat:
-                return s
-
-            dense_vect_list = seclist(
-                mpc.np_tolist(mpc.np_transpose(other._mat))[0], self.sectype
-            )
-
-            nnz = self._mat.shape[0]
-            unit_matrix = None
-            for i in range(nnz):
-                sparse_coord = self._mat[i, -2]
-                unit_vector = mpc.np_unit_vector(sparse_coord, self.shape[0])
-                if unit_matrix is None:
-                    unit_matrix = unit_vector
-                else:
-                    unit_matrix = mpc.np_vstack((unit_matrix, unit_vector))
-            temp = mpc.np_matmul(unit_matrix, other._mat)
-            s = mpc.np_matmul(mpc.np_transpose(temp), self._mat[:, -1:])
-            return s
+            return other.dot(self)
         else:
             raise NotImplementedError
 
