@@ -10,11 +10,9 @@ import scipy.sparse
 from mpyc.runtime import mpc
 
 from matrices import (
-    DenseMatrix,
-    DenseVector,
-    SparseMatrixColumn,
-    SparseMatrixRow,
-    SparseVector,
+    from_numpy_dense_matrix,
+    from_scipy_sparse_mat,
+    from_scipy_sparse_vect,
 )
 
 
@@ -127,8 +125,8 @@ async def benchmark_vect_mult(exp_env, n_dim, density, alg_choice=None):
     if alg_choice in ["*", "dense"]:
         params["Algorithm"] = "Dense sharing"
         async with exp_env.benchmark(params):
-            sec_x_dense = DenseVector(x_dense.transpose(), sectype=secfxp)
-            sec_y_dense = DenseVector(y_dense, sectype=secfxp)
+            sec_x_dense = from_numpy_dense_matrix(x_dense.transpose(), sectype=secfxp)
+            sec_y_dense = from_numpy_dense_matrix(y_dense, sectype=secfxp)
 
         params["Algorithm"] = "Dense"
         async with exp_env.benchmark(params):
@@ -141,8 +139,8 @@ async def benchmark_vect_mult(exp_env, n_dim, density, alg_choice=None):
     if alg_choice in ["*", "sparse"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = SparseVector(x_sparse, secfxp)
-            sec_y = SparseVector(y_sparse, secfxp)
+            sec_x = from_scipy_sparse_vect(x_sparse, secfxp)
+            sec_y = from_scipy_sparse_vect(y_sparse, secfxp)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):
@@ -186,9 +184,9 @@ async def benchmark_sparse_dense_vect_mult(exp_env, n_dim, density, alg_choice=N
     if alg_choice in ["*", "dense"]:
         params["Algorithm"] = "Dense sharing"
         async with exp_env.benchmark(params):
-            sec_x_dense = DenseVector(x_dense.transpose(), sectype=secfxp)
+            sec_x_dense = from_numpy_dense_matrix(x_dense.transpose(), sectype=secfxp)
 
-        sec_y_dense = DenseVector(y_dense, sectype=secfxp)
+        sec_y_dense = from_numpy_dense_matrix(y_dense, sectype=secfxp)
 
         params["Algorithm"] = "Dense"
         async with exp_env.benchmark(params):
@@ -201,9 +199,9 @@ async def benchmark_sparse_dense_vect_mult(exp_env, n_dim, density, alg_choice=N
     if alg_choice in ["*", "sparse"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = SparseVector(x_sparse, secfxp)
+            sec_x = from_scipy_sparse_vect(x_sparse, secfxp)
 
-        sec_y = SparseVector(y_sparse, secfxp)
+        sec_y = from_scipy_sparse_vect(y_sparse, secfxp)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):
@@ -214,9 +212,9 @@ async def benchmark_sparse_dense_vect_mult(exp_env, n_dim, density, alg_choice=N
     if alg_choice in ["*", "sparse-dense"]:
         params["Algorithm"] = "Sparse-dense sharing"
         async with exp_env.benchmark(params):
-            sec_x = SparseVector(x_sparse, secfxp)
+            sec_x = from_scipy_sparse_vect(x_sparse, secfxp)
 
-        sec_y = DenseVector(y_dense, secfxp)
+        sec_y = from_numpy_dense_matrix(y_dense, secfxp)
         # We assume the dense vector is reused for multiple operations
         # So we only measure the sharing cost of the first vector
 
@@ -260,8 +258,8 @@ async def benchmark_mat_vector_mult(exp_env, n_dim, density, alg_choice=None):
     if alg_choice in ["*", "dense"]:
         params["Algorithm"] = "Dense sharing"
         async with exp_env.benchmark(params):
-            sec_x_dense = DenseMatrix(x_dense, sectype=secfxp)
-            sec_y_dense = DenseVector(y_dense, sectype=secfxp)
+            sec_x_dense = from_numpy_dense_matrix(x_dense, sectype=secfxp)
+            sec_y_dense = from_numpy_dense_matrix(y_dense, sectype=secfxp)
 
         params["Algorithm"] = "Dense"
         async with exp_env.benchmark(params):
@@ -275,14 +273,14 @@ async def benchmark_mat_vector_mult(exp_env, n_dim, density, alg_choice=None):
     if alg_choice in ["*", "sparse"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = SparseMatrixRow(X_sparse, secfxp)
-            sec_y = SparseVector(y_sparse, secfxp)
+            sec_x = from_scipy_sparse_mat(X_sparse, secfxp, leakage_axis=0)
+            sec_y = from_scipy_sparse_vect(y_sparse, secfxp)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):
             z = await sec_x.dot(sec_y)
 
-            sparse_nb_non_zeros = len(z._mat)
+            sparse_nb_non_zeros = z.nnz
             assert nb_non_zeros == sparse_nb_non_zeros
 
 
@@ -314,8 +312,8 @@ async def benchmark_sparse_sparse_mat_mult(
     if alg_choice in ["dense", "*"]:
         params["Algorithm"] = "Dense sharing"
         async with exp_env.benchmark(params):
-            sec_dense_t = DenseMatrix(dense_mat.transpose(), sectype=secfxp)
-            sec_dense = DenseMatrix(dense_mat, sectype=secfxp)
+            sec_dense_t = from_numpy_dense_matrix(dense_mat.transpose(), sectype=secfxp)
+            sec_dense = from_numpy_dense_matrix(dense_mat, sectype=secfxp)
         del dense_mat
 
         params["Algorithm"] = "Dense"
@@ -331,14 +329,14 @@ async def benchmark_sparse_sparse_mat_mult(
     if alg_choice in ["sparse", "*"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = SparseMatrixColumn(X_sparse.transpose(), secfxp)
-            sec_y = SparseMatrixRow(X_sparse, secfxp)
+            sec_x = from_scipy_sparse_mat(X_sparse.transpose(), secfxp, leakage_axis=1)
+            sec_y = from_scipy_sparse_mat(X_sparse, secfxp, leakage_axis=0)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):
             z = await sec_x.dot(sec_y)
 
-        sparse_nb_non_zeros = len(z._mat)
+        sparse_nb_non_zeros = z.nnz
         assert nb_non_zeros == sparse_nb_non_zeros
 
 
