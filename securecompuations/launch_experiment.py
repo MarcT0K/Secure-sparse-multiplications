@@ -396,6 +396,9 @@ def clean_csv():
 
 def main():
     random.seed(74589312)
+    if not os.path.exists("data"):
+        os.makedirs("data")
+    os.chdir("data")
     archive_experiment_results()
     setup_logger()
 

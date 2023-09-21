@@ -215,10 +215,18 @@ def gen_all_figures(csv_name, rows_or_col, xlabel, until_overflow=False):
     plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel)
 
 
-if __name__ == "__main__":
+def main():
+    if not os.path.exists("figures"):
+        os.makedirs("figures")
+    os.chdir("figures")
+
     gen_all_figures("vect_mult", "rows", "Vector length")
     gen_all_figures("mat_mult", "columns", "Number of columns", until_overflow=True)
     gen_all_figures(
         "mat_vect_mult", "columns", "Number of columns", until_overflow=True
     )
     plt.close("all")
+
+
+if __name__ == "__main__":
+    main()

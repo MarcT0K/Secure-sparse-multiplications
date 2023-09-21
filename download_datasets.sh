@@ -1,5 +1,8 @@
 sudo apt install wget unzip
 
+mkdir datasets
+cd datasets
+
 # Spam detection
 wget https://archive.ics.uci.edu/static/public/228/sms+spam+collection.zip
 unzip sms+spam+collection.zip
