@@ -163,8 +163,7 @@ def sparse_dense_vect_mult_experiments():
         seed = generate_seed()
         nb_rows = j * 10**i
         base_args = [
-            "python3",
-            "benchmark.py",
+            "benchmark",
             "-M3",
             "--benchmark",
             "sparse_dense_vect_mult",
@@ -230,8 +229,7 @@ def mat_vect_mult_experiments():
         seed = generate_seed()
         nb_rows = j * 10**i
         base_args = [
-            "python3",
-            "benchmark.py",
+            "benchmark",
             "-M3",
             "--benchmark",
             "mat_vect_mult",
@@ -306,8 +304,7 @@ def matmult_experiments():
         nb_cols = j * 10**i
         nb_rows = 10**2
         base_args = [
-            "python3",
-            "benchmark.py",
+            "benchmark",
             "-M3",
             "--benchmark",
             "mat_mult",
@@ -402,7 +399,7 @@ def main():
     setup_logger()
 
     try:
-        vect_mult_experiments()
+        # vect_mult_experiments()
         sparse_dense_vect_mult_experiments()
         mat_vect_mult_experiments()
         matmult_experiments()

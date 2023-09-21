@@ -1,6 +1,7 @@
 import random
 
 import pandas as pd
+import scipy.sparse
 
 from mpyc.runtime import mpc
 from sklearn.feature_extraction.text import CountVectorizer
@@ -9,9 +10,18 @@ from sklearn.linear_model import LogisticRegression
 from ..matrices import (
     from_numpy_dense_matrix,
     from_scipy_sparse_vect,
-    DenseVector,
     SparseVector,
 )
+from ..benchmark import ExperimentalEnvironment
+
+CSV_FIELDS = [
+    "Timestamp",
+    "Initial seed",
+    "Algorithm",
+    "Density",
+    "Runtime",
+    "Communication cost",
+]
 
 
 def extract_dataset():
@@ -41,25 +51,66 @@ class SecureLogisticRegression:
             return secure_input.dot(self.coef_) + self.intercept_
 
 
-async def experiment(sparse=True):
-    random.seed(476528)
-    sec_fxp = mpc.SecFxp(64)
+class SecureSparseLogisticRegression:
+    def __init__(self, logreg, sectype):
+        sparse_coef = scipy.sparse.coo_matrix(logreg.coef_.T)
+        self.coef_ = from_scipy_sparse_vect(sparse_coef, sectype)
+        self.intercept_ = sectype(logreg.intercept_[0])
 
-    X_sparse, y = extract_dataset()
-    model = train_logreg(X_sparse, y)
+    async def predict(self, secure_input):
+        return (await secure_input.dot(self.coef_)) + self.intercept_
 
-    sec_model = SecureLogisticRegression(model, sec_fxp)
 
-    samples = random.sample(range(X_sparse.shape[0]), k=100)
-    for user_id in samples:
-        user_input = X_sparse[user_id, :]
-        if sparse:
-            sec_input = from_scipy_sparse_vect(user_input, sectype=sec_fxp)
+async def experiment():
+    async with ExperimentalEnvironment(
+        "spam_detection.csv", CSV_FIELDS, seed=548941
+    ) as exp_env:
+        sec_fxp = mpc.SecFxp(64)
+
+        X_sparse, y = extract_dataset()
+        model = train_logreg(X_sparse, y)
+
+        sec_model = SecureLogisticRegression(model, sec_fxp)
+        sec_sparse_model = SecureSparseLogisticRegression(model, sec_fxp)
+
+        if mpc.pid == 0:
+            samples = random.sample(range(X_sparse.shape[0]), k=10)
         else:
-            sec_input = from_numpy_dense_matrix(user_input.todense(), sectype=sec_fxp)
+            samples = None
+        samples = await mpc.transfer(samples, senders=0)
 
-        sec_res = await sec_model.predict(sec_input)
-        _res = await mpc.output(sec_res)
+        for user_id in samples:
+            user_input = X_sparse[user_id, :]
+            density = 1 - user_input.nnz / user_input.shape[1]
+            async with exp_env.benchmark(
+                {"Algorithm": "Dense sharing", "Density": density}
+            ):
+                sec_input = from_numpy_dense_matrix(
+                    user_input.todense(), sectype=sec_fxp
+                )
+            async with exp_env.benchmark({"Algorithm": "Dense", "Density": density}):
+                sec_res = await sec_model.predict(sec_input)
+                res_dense = await mpc.output(sec_res)
+
+            async with exp_env.benchmark(
+                {"Algorithm": "Sparse-dense sharing", "Density": density}
+            ):
+                sec_input = from_scipy_sparse_vect(user_input, sectype=sec_fxp)
+            async with exp_env.benchmark(
+                {"Algorithm": "Sparse-dense", "Density": density}
+            ):
+                sec_res = await sec_model.predict(sec_input)
+                res_sparse_dense = await mpc.output(sec_res)
+
+            async with exp_env.benchmark(
+                {"Algorithm": "Sparse sharing", "Density": density}
+            ):
+                sec_input = from_scipy_sparse_vect(user_input, sectype=sec_fxp)
+            async with exp_env.benchmark({"Algorithm": "Sparse", "Density": density}):
+                sec_res = await sec_sparse_model.predict(sec_input)
+                res_sparse = await mpc.output(sec_res)
+
+            assert res_dense == res_sparse_dense and res_sparse == res_dense
 
 
 def run():
