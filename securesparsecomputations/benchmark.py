@@ -8,7 +8,7 @@ import numpy as np
 import scipy.sparse
 from mpyc.runtime import mpc
 
-from matrices import (
+from .matrices import (
     from_numpy_dense_matrix,
     from_scipy_sparse_mat,
     from_scipy_sparse_vect,
@@ -406,5 +406,5 @@ async def main():
         raise NotImplementedError
 
 
-if __name__ == "__main__":
+def run():
     mpc.run(main())

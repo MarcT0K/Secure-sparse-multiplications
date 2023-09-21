@@ -6,8 +6,8 @@ import numpy as np
 import scipy.sparse
 from mpyc.runtime import mpc
 
-from radix_sort import radix_sort
-from resharing import np_shuffle_3PC
+from .radix_sort import radix_sort
+from .resharing import np_shuffle_3PC
 
 ScipySparseMatType = scipy.sparse._coo.coo_matrix
 
@@ -102,7 +102,12 @@ class DenseVector(DenseMatrix):
 
 def from_numpy_dense_matrix(dense_matrix, sectype) -> Union[DenseMatrix, DenseVector]:
     shape = dense_matrix.shape
-    temp_mat = [sectype(i) for i in dense_matrix.flatten().tolist()[0]]
+
+    flattened = dense_matrix.flatten()
+    flattened = (
+        flattened.tolist() if len(flattened.shape) == 1 else flattened.tolist()[0]
+    )
+    temp_mat = [sectype(i) for i in flattened]
     secure_mat = mpc.input(
         mpc.np_reshape(mpc.np_fromlist(temp_mat), dense_matrix.shape), senders=0
     )
@@ -128,6 +133,9 @@ class SparseVector(SecureMatrix):
 
         if self.shape[1] != 1:
             raise ValueError("Input must be a vector")
+        # NB: the implementation can be generalized to handle vectors completely
+        # even if they are permuted. Our work focused on the most complex operation:
+        # the inner product. The outer product is trivial.
 
     async def dot(self, other):
         if self.shape != other.shape:
@@ -159,13 +167,19 @@ class SparseVector(SecureMatrix):
 
 
 def from_scipy_sparse_vect(sparse_vect, sectype):
+    if sparse_vect.format != "coo":
+        sparse_vect = sparse_vect.tocoo()
+
+    if sparse_vect.shape[1] != 1:
+        sparse_vect = sparse_vect.T
+
     row_bit_length = int(math.log(sparse_vect.shape[0], 2)) + 1
     secure_mat = []
 
     for i, _j, v in zip(sparse_vect.row, sparse_vect.col, sparse_vect.data):
         secure_mat.extend(SecureMatrix.int_to_secure_bits(i, sectype, row_bit_length))
         secure_mat.append(sectype(int(i)))
-        secure_mat.append(sectype(v))
+        secure_mat.append(sectype(float(v)))
 
     if secure_mat:
         np_mat = mpc.np_reshape(
@@ -490,7 +504,6 @@ class SparseMatrixRow(SecureMatrix):
         )
 
 
-@staticmethod
 def from_scipy_sparse_mat(sparse_mat: ScipySparseMatType, sectype, leakage_axis=0):
     assert leakage_axis in [0, 1]
 
@@ -503,7 +516,7 @@ def from_scipy_sparse_mat(sparse_mat: ScipySparseMatType, sectype, leakage_axis=
     sparse_mat = sparse_mat.tocsr()
     for i in range(sparse_mat.shape[leakage_axis]):
         curr_vect = sparse_mat[i, :].T if leakage_axis == 0 else sparse_mat[:, i]
-        secure_mat.append(from_scipy_sparse_vect(curr_vect.tocoo(), sectype))
+        secure_mat.append(from_scipy_sparse_vect(curr_vect, sectype))
 
     retcls = SparseMatrixRow if leakage_axis == 0 else SparseMatrixColumn
     return retcls(secure_mat, sparse_mat.shape, sectype)

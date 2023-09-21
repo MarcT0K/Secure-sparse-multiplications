@@ -226,7 +226,3 @@ def main():
         "mat_vect_mult", "columns", "Number of columns", until_overflow=True
     )
     plt.close("all")
-
-
-if __name__ == "__main__":
-    main()

@@ -109,8 +109,7 @@ def vect_mult_experiments():
         seed = generate_seed()
         nb_rows = j * 10**i
         base_args = [
-            "python3",
-            "benchmark.py",
+            "benchmark",
             "-M3",
             "--benchmark",
             "vect_mult",
@@ -414,7 +413,3 @@ def main():
         raise
 
     clean_csv()
-
-
-if __name__ == "__main__":
-    main()

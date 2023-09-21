@@ -10,7 +10,7 @@ rm readme sms+spam+collection.zip
 mv SMSSpamCollection spam.csv
 
 # Book recommendation application
-wget http://www2.informatik.uni-freiburg.de/~cziegler/BX/BX-CSV-Dump.zip
+wget https://web.archive.org/web/20230623001827/http://www2.informatik.uni-freiburg.de/~cziegler/BX/BX-CSV-Dump.zip
 unzip BX-CSV-Dump.zip
 rm BX-Books.csv BX-Users.csv BX-CSV-Dump.zip
 

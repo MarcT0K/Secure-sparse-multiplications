@@ -1,30 +1,33 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="Secure sparse computations",
+    name="securesparsecomputations",
     version="1.0",
     description="Codebase used in the paper Damie et al. 'Secure sparse matrix multiplications and their applications to PPML'",
     author="Marc DAMIE",
     author_email="marc.damie@inria.fr",
     license="MIT",
     packages=find_packages(),
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     install_requires=[
-        "git+https://github.com/lschoe/mpyc/",
+        "mpyc @ git+https://github.com/lschoe/mpyc/",
         "scipy",
         "numpy",
         "gmpy2",
         "matplotlib",
-        "sklearn",
+        "scikit-learn",
         "pandas",
         "psutil",
         "colorlog",
     ],
     entry_points={
         "console_scripts": [
-            "run_all_experiments = securecomputations.launch_experiment:main",
-            "generate_all_figures = securecomputations.generate_figures:main",
-            "benchmark = securecomputations.benchmark:__main__",
+            "run_all_experiments = securesparsecomputations.launch_experiment:main",
+            "generate_all_figures = securesparsecomputations.generate_figures:main",
+            "benchmark = securesparsecomputations.benchmark:run",
+            "benchmark_spam_detection = securesparsecomputations.applications.spam_detection:run",
+            "benchmark_recommender = securesparsecomputations.applications.recommender_system:run",
+            "benchmark_access_control = securesparsecomputations.applications.access_control:run",
         ],
     },
 )

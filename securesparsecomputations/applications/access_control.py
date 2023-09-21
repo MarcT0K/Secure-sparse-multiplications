@@ -27,5 +27,5 @@ def experiment():
     sec_fxp = mpc.SecFxp(64)
 
 
-if __name__ == "__main__":
+def run():
     experiment()

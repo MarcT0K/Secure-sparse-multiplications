@@ -8,7 +8,7 @@ import random
 
 from mpyc.runtime import mpc
 
-from resharing import np_shuffle_3PC
+from .resharing import np_shuffle_3PC
 
 
 async def bin_vec_to_B(bin_vect):

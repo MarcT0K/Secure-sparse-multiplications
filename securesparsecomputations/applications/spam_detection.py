@@ -15,7 +15,7 @@ from ..matrices import (
 
 
 def extract_dataset():
-    df = pd.read_csv("spam.csv", sep="\t", names=["Label", "Message"])
+    df = pd.read_csv("datasets/spam.csv", sep="\t", names=["Label", "Message"])
     vect = CountVectorizer(stop_words="english")
     vect.fit(df["Message"])
     X_sparse = vect.fit_transform(df["Message"])
@@ -31,8 +31,7 @@ def train_logreg(X, y):
 
 class SecureLogisticRegression:
     def __init__(self, logreg, sectype):
-        self.sectype = sectype
-        self.coef_ = from_numpy_dense_matrix(logreg.coef_[0], sectype)
+        self.coef_ = from_numpy_dense_matrix(logreg.coef_.T, sectype)
         self.intercept_ = sectype(logreg.intercept_[0])
 
     async def predict(self, secure_input):
@@ -43,7 +42,7 @@ class SecureLogisticRegression:
 
 
 async def experiment(sparse=True):
-    random.setstate(476528)
+    random.seed(476528)
     sec_fxp = mpc.SecFxp(64)
 
     X_sparse, y = extract_dataset()
@@ -55,13 +54,13 @@ async def experiment(sparse=True):
     for user_id in samples:
         user_input = X_sparse[user_id, :]
         if sparse:
-            sec_input = from_scipy_sparse_vect(user_input)
+            sec_input = from_scipy_sparse_vect(user_input, sectype=sec_fxp)
         else:
-            sec_input = from_numpy_dense_matrix(user_input.todense())
+            sec_input = from_numpy_dense_matrix(user_input.todense(), sectype=sec_fxp)
 
-        sec_res = sec_model.predict(sec_input)
+        sec_res = await sec_model.predict(sec_input)
         _res = await mpc.output(sec_res)
 
 
-if __name__ == "__main__":
+def run():
     mpc.run(experiment())
