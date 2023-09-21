@@ -1,5 +1,4 @@
 import argparse
-import math
 import random
 from contextlib import asynccontextmanager
 from csv import DictWriter

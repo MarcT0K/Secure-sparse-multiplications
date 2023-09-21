@@ -5,17 +5,15 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import scipy.sparse
 from mpyc.runtime import mpc
-from mpyc.seclists import seclist
 
 from radix_sort import radix_sort
 from resharing import np_shuffle_3PC
 
-SparseMatrixListType = List[List[int]]
 ScipySparseMatType = scipy.sparse._coo.coo_matrix
 
 
 class SecureMatrix:
-    _mat: Optional[SparseMatrixListType] = None
+    _mat = None
     shape: Tuple[int, int]
 
     def __init__(self, sectype=None, shape=None):
@@ -39,7 +37,6 @@ class SecureMatrix:
     def dot(self, other):
         raise NotImplementedError
 
-    @abstractmethod
     async def print(self):
         raise NotImplementedError
 
@@ -188,7 +185,9 @@ def from_scipy_sparse_vect(sparse_vect, sectype):
 class SparseMatrixCOO(SecureMatrix):
     def __init__(
         self,
-        sparse_mat: Union[SparseMatrixListType],
+        sparse_mat: List[
+            Tuple[mpc.SecureFixedPoint, mpc.SecureFixedPoint, mpc.SecureFixedPoint]
+        ],
         sectype=None,
         shape=None,
     ):
