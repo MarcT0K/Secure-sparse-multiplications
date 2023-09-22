@@ -1,3 +1,4 @@
+import math
 import random
 
 import pandas as pd
@@ -9,6 +10,8 @@ from ..matrices import (
     from_scipy_sparse_mat,
     from_numpy_dense_matrix,
     from_scipy_sparse_vect,
+    SecureMatrix,
+    DenseVector,
 )
 from ..benchmark import ExperimentalEnvironment
 
@@ -56,6 +59,10 @@ class KNNRecommenderSystem:
         # NB: We only compute the square of the cosine similarity to avoid computing a square-root.
         # This trick does no change the KNN output.
 
+    @property
+    def nb_books(self):
+        return self._dataset.shape[1]
+
     async def predict(self, secure_book_id):
         ...
 
@@ -66,11 +73,21 @@ class DenseKNNRecommenderSystem:
         self._sectype = sectype
         self._k = k
 
+    @property
+    def nb_books(self):
+        return self._dataset.shape[1]
+
     async def predict(self, secure_book_id):
         print("Norms", await mpc.output(self._dataset._mat[:20].sum(axis=1)))
-        selection_vector = mpc.np_unit_vector(secure_book_id, self._dataset.shape[1])
-        selected_movie = mpc.np_matmul(self._dataset._mat, selection_vector)
-        selected_movie_norm = mpc.np_sum(mpc.np_pow(selected_movie, 2))
+        selection_vector = DenseVector(
+            mpc.np_reshape(
+                mpc.np_unit_vector(secure_book_id, self.nb_books),
+                (self.nb_books, 1),
+            ),
+            self._sectype,
+        )
+        selected_movie = self._dataset.dot(selection_vector)
+        selected_movie_norm = mpc.np_sum(mpc.np_pow(selected_movie._mat, 2))
         movie_norms = mpc.np_sum(mpc.np_pow(self._dataset._mat, 2), axis=0)
         movie_norms *= selected_movie_norm
         # We add a negligible value for robustness (i.e., to avoid divisions by 0)
@@ -79,26 +96,23 @@ class DenseKNNRecommenderSystem:
         inv_norms = mpc.np_reciprocal(movie_norms)
         print("Inv", await mpc.output(inv_norms[:10]))
 
-        movie_inner_products = mpc.np_matmul(
-            mpc.np_transpose(self._dataset._mat), selected_movie
-        )
+        movie_inner_products = self._dataset.transpose().dot(selected_movie)
         print(
             "Inner",
             movie_inner_products.shape,
-            await mpc.output(movie_inner_products[:5]),
+            await mpc.output(movie_inner_products._mat[:5]),
         )
-        similarities = movie_inner_products  # * inv_norms
+        similarities = movie_inner_products._mat  # * inv_norms
         print("Sim", similarities.shape, await mpc.output(similarities))
 
-        ind_vector = mpc.np_fromlist(
-            [self._sectype(i) for i in range(self._dataset.shape[1])]
+        ind_vector = mpc.np_reshape(
+            mpc.np_fromlist([self._sectype(i) for i in range(self.nb_books)]),
+            (self.nb_books, 1),
         )
         print("Ind", ind_vector.shape)
         print(await mpc.output(ind_vector[:5]))
 
-        temp = mpc.np_transpose(
-            mpc.np_vstack((similarities, mpc.np_transpose(ind_vector)))
-        )
+        temp = mpc.np_hstack((similarities, ind_vector))
         print("Temp", temp.shape, await mpc.output(temp[:10]))
         sorted_results = mpc.np_sort(temp, axis=0, key=lambda tup: tup[0])
         print("Sorted", sorted_results.shape)
@@ -125,7 +139,11 @@ async def experiment():
         # sparse_model = KNNRecommenderSystem(X_sparse, sectype=sec_fxp)
         # for book_id in samples:
         #     async with exp_env.benchmark({"Algorithm": "Sparse sharing"}):
-        #         sec_input = mpc.input(sec_fxp(book_id), senders=0)
+        #         bit_length = int(math.log(X_sparse.shape[1], 2)) + 1
+        #         sec_input = [
+        #             SecureMatrix.int_to_secure_bits(book_id, sec_fxp, bit_length)
+        #         ] + [sec_fxp(book_id), sec_fxp(1)]
+        #         sec_input = mpc.input(mpc.np_fromlist(sec_input), senders=0)
         #     async with exp_env.benchmark({"Algorithm": "Sparse"}):
         #         sec_res = await sparse_model.predict(sec_input)
         #         _res_sparse = await mpc.output(sec_res)

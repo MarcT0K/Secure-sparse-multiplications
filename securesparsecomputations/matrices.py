@@ -54,7 +54,7 @@ class DenseMatrix(SecureMatrix):
 
     def dot(self, other):
         if isinstance(other, DenseMatrix) or isinstance(other, DenseVector):
-            return DenseMatrix(
+            return type(other)(
                 mpc.np_matmul(self._mat, other._mat), sectype=self.sectype
             )
         raise ValueError("Can only multiply dense with dense")
@@ -67,6 +67,9 @@ class DenseMatrix(SecureMatrix):
 
     def get(self, i, j):
         return self._mat[i][j]
+
+    def transpose(self):
+        return DenseMatrix(mpc.np_transpose(self._mat), self.sectype)
 
 
 class DenseVector(DenseMatrix):
