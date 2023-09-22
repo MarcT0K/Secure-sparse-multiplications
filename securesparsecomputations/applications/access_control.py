@@ -10,7 +10,7 @@ from ..matrices import DenseVector, SparseVector
 
 
 def extract_dataset():
-    access_log = pd.read_csv("amazon.csv")
+    access_log = pd.read_csv("datasets/amazon.csv")
     encoder = OneHotEncoder(sparse=True)
 
     label = access_log["ACTION"]
