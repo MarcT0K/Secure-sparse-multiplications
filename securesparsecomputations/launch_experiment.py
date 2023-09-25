@@ -366,6 +366,39 @@ def matmult_experiments():
     logger.info("FINISHED ALL MATRIX MULTIPLICATION EXPERIMENTS")
 
 
+def spam_detection_application():
+    logger.info("START SPAM DETECTION EXPERIMENT")
+    subp = Popen(
+        ["benchmark_spam_detection", "-M3"],
+        stdout=PIPE,
+        stderr=STDOUT,
+    )
+    track_memory(subp)
+    logger.info("FINISHED SPAM DETECTION EXPERIMENT")
+
+
+def recommender_system_application():
+    logger.info("START RECOMMENDER SYSTEM EXPERIMENT")
+    subp = Popen(
+        ["benchmark_recommender", "-M3"],
+        stdout=PIPE,
+        stderr=STDOUT,
+    )
+    track_memory(subp)
+    logger.info("FINISHED RECOMMENDER SYSTEM EXPERIMENT")
+
+
+def access_control_application():
+    logger.info("START ACCESS CONTROL EXPERIMENT")
+    subp = Popen(
+        ["benchmark_access_control", "-M3"],
+        stdout=PIPE,
+        stderr=STDOUT,
+    )
+    track_memory(subp)
+    logger.info("FINISHED ACCESS CONTROL EXPERIMENT")
+
+
 def clean_csv():
     """Removes from the CSV files all lines for experiments that crashed during computation times.
 
@@ -399,10 +432,13 @@ def main():
     setup_logger()
 
     try:
-        # vect_mult_experiments()
+        vect_mult_experiments()
         sparse_dense_vect_mult_experiments()
         mat_vect_mult_experiments()
         matmult_experiments()
+        spam_detection_application()
+        # recommender_system_application()
+        # access_control_application()
     except KeyboardInterrupt:  # To avoid memory leakage
         psutil_proc = psutil.Process(os.getpid())
         for proc in psutil_proc.children(recursive=True):
