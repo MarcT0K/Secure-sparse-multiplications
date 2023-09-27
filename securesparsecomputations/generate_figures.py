@@ -1,3 +1,4 @@
+import os
 import matplotlib.pyplot as plt
 import pandas as pd
 from cycler import cycler
@@ -215,6 +216,46 @@ def gen_all_figures(csv_name, rows_or_col, xlabel, until_overflow=False):
     plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel)
 
 
+# Sparse-dense plot
+def plot_sparse_dense_experiment(csv_name="sparse_dense"):
+    df = pd.read_csv(csv_name + ".csv")
+    dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.0001)]
+    sparse_mult = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.0001)]
+    sparse_dense_mult = df[
+        (df["Algorithm"] == "Sparse-dense") & (df["Density"] == 0.0001)
+    ]
+
+    def figure_per_col(col, unit):
+        fig, ax = plt.subplots()
+
+        ax.plot(dense_mult["Nb. rows"], dense_mult[col], label="Dense")
+        ax.plot(
+            sparse_mult["Nb. rows"],
+            sparse_mult[col],
+            label="Sparse",
+        )
+        ax.plot(
+            sparse_dense_mult["Nb. rows."],
+            sparse_dense_mult[col],
+            label="Sparse-dense",
+        )
+
+        ax.set(xlabel="Vector length", ylabel=f"{col} ({unit})")
+        ax.legend()
+        ax.set_yscale("log")
+        ax.set_xscale("log")
+
+        fig.tight_layout()
+        fig.savefig(
+            f"{csv_name}_mult_{col.lower().replace(' ', '_')}.png",
+            dpi=400,
+        )
+        plt.close(fig)
+
+    figure_per_col("Runtime", "s")
+    figure_per_col("Communication cost", "bytes")
+
+
 def main():
     if not os.path.exists("figures"):
         os.makedirs("figures")
@@ -225,4 +266,5 @@ def main():
     gen_all_figures(
         "mat_vect_mult", "columns", "Number of columns", until_overflow=True
     )
+    plot_sparse_dense_experiment()
     plt.close("all")
