@@ -155,7 +155,7 @@ def sparse_dense_vect_mult_experiments():
     dense_failed = False
     sparse_failed = False
     sparse_dense_failed = False
-    for i, j, density in product(range(1, 6), range(1, 10, 2), [0.0001, 0.001, 0.01]):
+    for i, j, density in product(range(1, 6), range(1, 10, 2), [0.0001]):
         if dense_failed and sparse_failed and sparse_dense_failed:
             logger.warning("All algorithms failed")
             break
