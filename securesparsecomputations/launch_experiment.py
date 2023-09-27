@@ -101,7 +101,7 @@ def vect_mult_experiments():
     logger.info("START VECTOR MULTIPLICATION EXPERIMENTS")
     dense_failed = False
     sparse_failed = False
-    for i, j, density in product(range(1, 9), range(1, 10, 2), [0.0001, 0.001, 0.01]):
+    for i, j, density in product(range(1, 6), range(1, 10, 2), [0.0001, 0.001, 0.01]):
         if dense_failed and sparse_failed:
             logger.warning("Both algorithms failed")
             break
@@ -221,7 +221,7 @@ def mat_vect_mult_experiments():
     sparse01_failed = False
     sparse1_failed = False
 
-    for i, j in product(range(2, 7), range(1, 10, 2)):
+    for i, j in product(range(2, 6), range(1, 10, 2)):
         if dense_failed and sparse001_failed and sparse01_failed and sparse1_failed:
             logger.warning("All algorithms failed")
             break
@@ -295,7 +295,7 @@ def matmult_experiments():
     sparse001_failed = False
     sparse01_failed = False
     sparse1_failed = False
-    for i, j in product(range(2, 7), range(1, 10, 2)):
+    for i, j in product(range(2, 6), range(1, 10, 2)):
         if dense_failed and sparse001_failed and sparse01_failed and sparse1_failed:
             logger.warning("All algorithms failed")
             break
