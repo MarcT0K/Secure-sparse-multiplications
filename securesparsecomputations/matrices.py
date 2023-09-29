@@ -366,7 +366,7 @@ class SparseMatrixRow(SecureMatrix):
 
 
 async def _matrix_vector_prod(mat, vect) -> SparseVector:
-    assert isinstance(SparseVector, vect)
+    assert isinstance(vect, SparseVector)
 
     if vect.nnz == 0:
         return SparseVector(None, shape=(mat.shape[0], 1), sectype=mat.sectype)
@@ -374,7 +374,7 @@ async def _matrix_vector_prod(mat, vect) -> SparseVector:
     ### NUMPY-LIKE MATRIX PREPARATION (i.e., for parallelized operations)
     padded_matrix = []
 
-    if isinstance(SparseMatrixRow, mat):
+    if isinstance(mat, SparseMatrixRow):
         for i in range(mat.shape[0]):
             curr_row = mat.get_row(i)
 
@@ -403,7 +403,7 @@ async def _matrix_vector_prod(mat, vect) -> SparseVector:
             )
 
             padded_matrix.append(curr_row_mat)
-    elif isinstance(SparseMatrixColumn, mat):
+    elif isinstance(mat, SparseMatrixColumn):
         for j in range(mat.shape[0]):
             curr_col = mat.get_column(j)
 
