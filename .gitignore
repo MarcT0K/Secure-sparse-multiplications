@@ -4,7 +4,6 @@
 *.log
 *.csv
 *.csv.old
-!data/*.csv
 *.png
 .vscode
 
