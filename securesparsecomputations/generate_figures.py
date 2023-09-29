@@ -5,7 +5,6 @@ from cycler import cycler
 
 params = {
     "text.usetex": True,
-    "text.latex.preamble": [r"\usepackage{amssymb}", r"\usepackage{amsmath}"],
     "font.size": 15,
     "axes.labelsize": 25,
     "axes.grid": True,
@@ -13,7 +12,7 @@ params = {
     "grid.alpha": 0.7,
     "scatter.marker": "x",
 }
-plt.style.use("seaborn-colorblind")
+plt.style.use("seaborn-v0_8-colorblind")
 plt.rc(
     "axes",
     prop_cycle=(
@@ -24,58 +23,8 @@ plt.rc(
 plt.rcParams.update(params)
 
 
-def plot_sharing_experiment(csv_name, rows_or_col, xlabel):
-    df = pd.read_csv(csv_name + ".csv")
-    dense_sharing = df[(df["Algorithm"] == "Dense sharing") & (df["Density"] == 0.001)]
-    sparse_sharing_001 = df[
-        (df["Algorithm"] == "Sparse sharing") & (df["Density"] == 0.0001)
-    ]
-    sparse_sharing_01 = df[
-        (df["Algorithm"] == "Sparse sharing") & (df["Density"] == 0.001)
-    ]
-    sparse_sharing_1 = df[
-        (df["Algorithm"] == "Sparse sharing") & (df["Density"] == 0.01)
-    ]
-
-    def figure_per_col(col, unit):
-        fig, ax = plt.subplots()
-
-        ax.plot(dense_sharing[f"Nb. {rows_or_col}"], dense_sharing[col], label="Dense")
-        ax.plot(
-            sparse_sharing_01[f"Nb. {rows_or_col}"],
-            sparse_sharing_01[col],
-            label=r"Sparse (99.9\%)",
-        )
-        ax.plot(
-            sparse_sharing_001[f"Nb. {rows_or_col}"],
-            sparse_sharing_001[col],
-            label=r"Sparse (99.5\%)",
-        )
-        ax.plot(
-            sparse_sharing_1[f"Nb. {rows_or_col}"],
-            sparse_sharing_1[col],
-            label=r"Sparse (99\%)",
-        )
-        ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
-        ax.legend()
-
-        ax.set_yscale("log")
-        ax.set_xscale("log")
-
-        fig.tight_layout()
-        fig.savefig(
-            f"{csv_name}_sharing_{col.lower().replace(' ', '_')}.png",
-            dpi=400,
-        )
-
-        plt.close(fig)
-
-    figure_per_col("Runtime", "s")
-    figure_per_col("Communication cost", "bytes")
-
-
 def plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=False):
-    df = pd.read_csv(csv_name + ".csv")
+    df = pd.read_csv("../data/" + csv_name + ".csv")
     dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.001)]
     sparse_mult_001 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.0001)]
     sparse_mult_01 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.001)]
@@ -153,7 +102,7 @@ def plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=False):
 
 
 def plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel):
-    df = pd.read_csv(csv_name + ".csv")
+    df = pd.read_csv("../data/" + csv_name + ".csv")
     dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.001)]
     sparse_mult_001 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.0001)]
     sparse_mult_01 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.001)]
@@ -211,14 +160,13 @@ def plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel):
 
 
 def gen_all_figures(csv_name, rows_or_col, xlabel, until_overflow=False):
-    plot_sharing_experiment(csv_name, rows_or_col, xlabel)
     plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=until_overflow)
     plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel)
 
 
 # Sparse-dense plot
-def plot_sparse_dense_experiment(csv_name="sparse_dense"):
-    df = pd.read_csv(csv_name + ".csv")
+def plot_sparse_dense_experiment(csv_name="sparse_dense_vect_mult"):
+    df = pd.read_csv("../data/" + csv_name + ".csv")
     dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.0001)]
     sparse_mult = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.0001)]
     sparse_dense_mult = df[
@@ -235,7 +183,7 @@ def plot_sparse_dense_experiment(csv_name="sparse_dense"):
             label="Sparse",
         )
         ax.plot(
-            sparse_dense_mult["Nb. rows."],
+            sparse_dense_mult["Nb. rows"],
             sparse_dense_mult[col],
             label="Sparse-dense",
         )
@@ -262,9 +210,10 @@ def main():
     os.chdir("figures")
 
     gen_all_figures("vect_mult", "rows", "Vector length")
-    gen_all_figures("mat_mult", "columns", "Number of columns", until_overflow=True)
+    plot_sparse_dense_experiment()
     gen_all_figures(
         "mat_vect_mult", "columns", "Number of columns", until_overflow=True
     )
-    plot_sparse_dense_experiment()
+    gen_all_figures("mat_mult", "columns", "Number of columns", until_overflow=True)
+
     plt.close("all")
