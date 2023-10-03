@@ -523,7 +523,6 @@ async def _matrix_vector_prod(mat, vect) -> SparseVector:
     else:
         raise NotImplementedError
 
-    final_res = []
     zero_test = await mpc.np_is_zero_public(
         res[:, -2] + 1
     )  # Here, we leak the number of non-zero elements in the output matrix
@@ -537,11 +536,6 @@ async def _matrix_vector_prod(mat, vect) -> SparseVector:
 
 def from_scipy_sparse_mat(sparse_mat: ScipySparseMatType, sectype, leakage_axis=0):
     assert leakage_axis in [0, 1]
-
-    if leakage_axis == 0:
-        bit_length = int(math.log(sparse_mat.shape[1], 2)) + 1
-    else:
-        bit_length = int(math.log(sparse_mat.shape[0], 2)) + 1
 
     secure_mat = []
     sparse_mat = sparse_mat.tocsr()
