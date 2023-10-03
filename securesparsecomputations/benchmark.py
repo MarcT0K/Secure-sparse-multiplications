@@ -301,7 +301,6 @@ async def benchmark_sparse_sparse_mat_mult(
 
     X_sparse = await mpc.transfer(X_sparse, senders=0)
     nb_non_zeros = len((X_sparse.T @ X_sparse).data)
-    dense_mat = X_sparse.todense()
 
     params = {
         "Nb. rows": n_dim,
@@ -311,9 +310,10 @@ async def benchmark_sparse_sparse_mat_mult(
     if alg_choice in ["dense", "*"]:
         params["Algorithm"] = "Dense sharing"
         async with exp_env.benchmark(params):
+            dense_mat = X_sparse.todense()
             sec_dense_t = from_numpy_dense_matrix(dense_mat.transpose(), sectype=secfxp)
             sec_dense = from_numpy_dense_matrix(dense_mat, sectype=secfxp)
-        del dense_mat
+            del dense_mat
 
         params["Algorithm"] = "Dense"
         async with exp_env.benchmark(params):

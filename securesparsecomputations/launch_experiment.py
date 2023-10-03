@@ -290,7 +290,7 @@ def mat_vect_mult_experiments():
 
 
 def matmult_experiments():
-    logger.info("START MATRIX MULTIPLICATION EXPERIMENTS")
+    logger.info("START MATRIX-MATRIX MULTIPLICATION EXPERIMENTS")
     dense_failed = False
     sparse001_failed = False
     sparse01_failed = False
@@ -306,6 +306,7 @@ def matmult_experiments():
         base_args = [
             "benchmark",
             "-M3",
+            "--no-prss",
             "--benchmark",
             "mat_mult",
             "--seed",
@@ -363,7 +364,7 @@ def matmult_experiments():
         else:
             logger.warning("Skipped sparse 1 percent experiments")
 
-    logger.info("FINISHED ALL MATRIX MULTIPLICATION EXPERIMENTS")
+    logger.info("FINISHED ALL MATRIX-MATRIX MULTIPLICATION EXPERIMENTS")
 
 
 def spam_detection_application():

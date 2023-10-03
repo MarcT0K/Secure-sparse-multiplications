@@ -212,7 +212,7 @@ def main():
     gen_all_figures("vect_mult", "rows", "Vector length")
     plot_sparse_dense_experiment()
     gen_all_figures(
-        "mat_vect_mult", "columns", "Number of columns", until_overflow=True
+        "mat_vect_mult", "columns", "Number of columns and rows", until_overflow=True
     )
     gen_all_figures("mat_mult", "columns", "Number of columns", until_overflow=True)
 
