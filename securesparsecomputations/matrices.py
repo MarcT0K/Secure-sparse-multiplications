@@ -332,7 +332,7 @@ class SparseMatrixColumn(SecureMatrix):
             return SparseMatrixCOO(
                 final_res, sectype=self.sectype, shape=(self.shape[0], other.shape[1])
             )
-        elif isinstance(SparseVector, other):
+        elif isinstance(other, SparseVector):
             return await _matrix_vector_prod(self, other)
         raise NotImplementedError
 

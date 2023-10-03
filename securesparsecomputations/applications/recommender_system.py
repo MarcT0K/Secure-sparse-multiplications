@@ -10,14 +10,13 @@ from mpyc.runtime import mpc
 from ..matrices import (
     from_scipy_sparse_mat,
     from_numpy_dense_matrix,
-    from_scipy_sparse_vect,
     SecureMatrix,
     SparseVector,
     DenseVector,
     SparseMatrixRow,
 )
 from ..radix_sort import radix_sort
-from ..shuffle import np_shuffle_3PC
+from ..resharing import np_shuffle_3PC
 from ..benchmark import ExperimentalEnvironment
 from ..quicksort import np_quicksort
 
@@ -66,8 +65,15 @@ def custom_np_reciprocal(vector):
 async def norm_sparse_matrix(matrix: SparseMatrixRow):  # column-wise
     assert isinstance(matrix, SparseMatrixRow)
 
-    merged_matrix = mpc.np_vstack(matrix._mat)
-    merged_matrix = mpc.np_hstack((merged_matrix[:, -1], merged_matrix[:, -1] ** 2))
+    merged_matrix = []
+    for i in range(matrix.shape[0]):
+        curr_row = matrix._mat[i]
+        if curr_row.nnz != 0:
+            merged_matrix.append(curr_row._mat)
+    merged_matrix = mpc.np_vstack(merged_matrix)
+
+    square_val = merged_matrix[:, -1] ** 2
+    merged_matrix = mpc.np_hstack((merged_matrix[:, :-1], square_val.reshape(-1, 1)))
 
     padding_coord = []
     for i in range(matrix.shape[1]):
@@ -81,7 +87,6 @@ async def norm_sparse_matrix(matrix: SparseMatrixRow):  # column-wise
     )
     padding_val = matrix.sectype.array(np.zeros((matrix.shape[1], 1)))
     padding = mpc.np_hstack((padding_coord, padding_val))
-
     padded = mpc.np_vstack((merged_matrix, padding))
 
     res = await radix_sort(
@@ -118,13 +123,16 @@ async def norm_sparse_matrix(matrix: SparseMatrixRow):  # column-wise
     final_res = res[mask, :]
 
     public_coord = await mpc.output(final_res[:, 0])
-    return final_res[public_coord, 1]
+    permutation = np.empty_like(public_coord, dtype=int)
+    permutation[public_coord.astype(int)] = np.arange(len(permutation), dtype=int)
+
+    return final_res[permutation, 1]
 
 
 def norm_sparse_vector(vect):
     assert isinstance(vect, SparseVector)
     s = 0
-    for i in range(vect.shape[0]):
+    for i in range(vect.nnz):
         s += vect._mat[i, -1] ** 2
     return s
 
@@ -138,9 +146,9 @@ def compute_sparse_similarities(inner_products, inv_norms):
 
     unit_matrix = mpc.np_vstack(unit_matrix)
     val_vect = mpc.np_matmul(unit_matrix, inv_norms)
-    res = mpc.np_multiply(val_vect, inner_products[i, -1] ** 2)
+    similarities = mpc.np_multiply(val_vect, inner_products._mat[i, -1] ** 2)
 
-    return mpc.np_hstack((sparse_coord, res))
+    return mpc.np_hstack((similarities, sparse_coord.reshape(-1, 1)))
 
 
 class KNNRecommenderSystem:
@@ -154,8 +162,8 @@ class KNNRecommenderSystem:
         return self._dataset.shape[1]
 
     async def predict(self, secure_book_id):
-        assert isinstance(SparseVector, secure_book_id)
-        selected_movie = self._dataset.dot(secure_book_id)
+        assert isinstance(secure_book_id, SparseVector)
+        selected_movie = await self._dataset.dot(secure_book_id)
 
         selected_movie_norm = norm_sparse_vector(selected_movie)
         movie_norms = await norm_sparse_matrix(self._dataset)
@@ -167,7 +175,7 @@ class KNNRecommenderSystem:
         # We add a negligible value for robustness (i.e., to avoid divisions by 0)
         inv_norms = custom_np_reciprocal(movie_norms)
 
-        movie_inner_products = self._dataset.transpose().dot(selected_movie)
+        movie_inner_products = await self._dataset.transpose().dot(selected_movie)
         similarities = compute_sparse_similarities(movie_inner_products, inv_norms)
 
         sorted_results = await np_quicksort(similarities, key=lambda tup: tup[0])
@@ -206,8 +214,8 @@ class DenseKNNRecommenderSystem:
         # We add a negligible value for robustness (i.e., to avoid divisions by 0)
         inv_norms = custom_np_reciprocal(movie_norms)
 
-        movie_inner_products = self._dataset.transpose().dot(selected_movie) ** 2
-        similarities = mpc.np_multiply(movie_inner_products._mat, inv_norms)
+        movie_inner_products = self._dataset.transpose().dot(selected_movie)
+        similarities = mpc.np_multiply(movie_inner_products._mat**2, inv_norms)
 
         ind_vector = mpc.np_reshape(
             mpc.np_fromlist([self._sectype(i) for i in range(self.nb_books)]),
@@ -236,21 +244,25 @@ async def experiment():
             samples = None
         samples = await mpc.transfer(samples, senders=0)
 
-        # sparse_model = KNNRecommenderSystem(X_sparse, sectype=sec_fxp)
-        # for book_id in samples:
-        #     async with exp_env.benchmark({"Algorithm": "Sparse sharing"}):
-        #         bit_length = int(math.log(X_sparse.shape[1], 2)) + 1
-        #         sec_input = [
-        #             SecureMatrix.int_to_secure_bits(book_id, sec_fxp, bit_length)
-        #         ] + [sec_fxp(book_id), sec_fxp(1)]
-        #         sec_input = mpc.np_reshape(sec_input, (1, X_sparse.shape[1]))
-        #         sec_input = mpc.input(mpc.np_fromlist(sec_input), senders=0)
-        #         sec_input = SparseVector(
-        #             sec_input, shape=(1, X_sparse.shape[1]), sectype=sec_fxp
-        #         )
-        #     async with exp_env.benchmark({"Algorithm": "Sparse"}):
-        #         sec_res = await sparse_model.predict(sec_input)
-        #         _res_sparse = await mpc.output(sec_res)
+        sparse_model = KNNRecommenderSystem(X_sparse, sectype=sec_fxp)
+        for book_id in samples:
+            async with exp_env.benchmark({"Algorithm": "Sparse sharing"}):
+                bit_length = int(math.log(X_sparse.shape[1], 2)) + 1
+                sec_input = SecureMatrix.int_to_secure_bits(
+                    book_id, sec_fxp, bit_length
+                )
+                sec_input += [sec_fxp(book_id), sec_fxp(1)]
+                sec_input = mpc.np_fromlist(sec_input)
+                sec_input = mpc.np_reshape(sec_input, (1, bit_length + 2))
+                assert sec_input.shape[1] == sparse_model._dataset._mat[0]._mat.shape[1]
+                sec_input = mpc.input(sec_input, senders=0)
+                sec_input = SparseVector(
+                    sec_input, shape=(X_sparse.shape[1], 1), sectype=sec_fxp
+                )
+            async with exp_env.benchmark({"Algorithm": "Sparse"}):
+                sec_res = await sparse_model.predict(sec_input)
+                _res_sparse = await mpc.output(sec_res)
+                print(_res_sparse)
 
         dense_model = DenseKNNRecommenderSystem(X_sparse.todense(), sectype=sec_fxp)
         for book_id in samples:
