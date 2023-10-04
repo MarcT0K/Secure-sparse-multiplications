@@ -8,7 +8,13 @@ import pandas as pd
 from mpyc.runtime import mpc
 from sklearn.preprocessing import OneHotEncoder
 
-from ..matrices import from_scipy_sparse_mat, from_numpy_dense_matrix, DenseMatrix
+from ..matrices import (
+    from_scipy_sparse_mat,
+    from_numpy_dense_matrix,
+    DenseMatrix,
+    DenseVector,
+    SparseVector,
+)
 from ..benchmark import ExperimentalEnvironment
 from ..resharing import np_shuffle_3PC
 from ..radix_sort import radix_sort
@@ -56,7 +62,6 @@ class LDA:
         self._compute_proportion(y)
         await self._compute_means(X, y)
         await self._compute_covariance(X)
-        # TODO: check output values
 
     def predict(self, x):
         ...
@@ -86,22 +91,21 @@ class SparseLDA(LDA):
         )
 
         col_val = mpc.np_tolist(res[:, -1])
-        col_i = res[:-1, 0] * (1 - comp) + (-1) * comp
+        col_i = res[:-1, -2] * (1 - comp) + (-1) * comp
         # If the test is false, the value of this column is -1 (i.e., a placeholder)
 
-        print("W")
         for i in range(res.shape[0] - 1):
             col_val[i + 1] = col_val[i + 1] + comp[i] * col_val[i]
-        col_i = mpc.np_hstack((col_i, res[-1, 0:1]))
+        col_i = mpc.np_hstack((col_i, res[-1, -2:-1]))
         col_val = mpc.np_reshape(mpc.np_fromlist(col_val), (res.shape[0], 1))
         col_i = mpc.np_reshape(col_i, (res.shape[0], 1))
 
-        res = mpc.np_hstack((col_i, col_val))
+        res = mpc.np_hstack((res[:, :-2], col_i, col_val))
 
         res = await np_shuffle_3PC(res)
 
         zero_test = await mpc.np_is_zero_public(
-            res[:, 0] + 1
+            res[:, -2] + 1
         )  # Here, we leak the number of non-zero elements in the output matrix
         zero_val_test = await mpc.np_is_zero_public(res[:, -1])
 
@@ -111,8 +115,12 @@ class SparseLDA(LDA):
         final_res = res[mask, :]
 
         label = await mpc.output(final_res[:, 0])
-        mean_vector_1 = final_res[label == 0, 1:]
-        mean_vector_2 = final_res[label == 1, 1:]
+        mean_vector_1 = SparseVector(
+            final_res[label == 0, 1:], (X.shape[1], 1), X.sectype
+        )
+        mean_vector_2 = SparseVector(
+            final_res[label == 1, 1:], (X.shape[1], 1), X.sectype
+        )
 
         self._mean_vectors = (mean_vector_1, mean_vector_2)
 
@@ -122,14 +130,13 @@ class DenseLDA(LDA):
         merged_matrix = mpc.np_hstack((X._mat, y._mat))
         merged_matrix = await np_shuffle_3PC(merged_matrix)
         cleartext_label = await mpc.output(merged_matrix[:, -1])
-        print(cleartext_label)
 
         class_1_matrix = merged_matrix[cleartext_label == 0, :-1]
         class_2_matrix = merged_matrix[cleartext_label == 1, :-1]
 
         self._mean_vectors = (
-            mpc.np_sum(class_1_matrix, axis=0),
-            mpc.np_sum(class_2_matrix, axis=0),
+            DenseVector(mpc.np_sum(class_1_matrix, axis=0).reshape(-1, 1), X.sectype),
+            DenseVector(mpc.np_sum(class_2_matrix, axis=0).reshape(-1, 1), X.sectype),
         )
 
 
@@ -140,7 +147,7 @@ async def experiment():
         sec_fxp = mpc.SecFxp(64)
         X, y, _encoder = extract_dataset()
         print("Extraction done.")
-        X = X[:NB_TRAINING_SAMPLES, :200]  # TODO: remove the limit on nb features
+        X = X[:NB_TRAINING_SAMPLES, :]
         y = y[:NB_TRAINING_SAMPLES]
 
         sparse_model = SparseLDA()
