@@ -28,6 +28,8 @@ CSV_FIELDS = [
     "Communication cost",
 ]
 
+NB_TRAINING_SAMPLES = 1000
+
 
 def extract_dataset():
     ratings = pd.read_csv(
@@ -236,7 +238,7 @@ async def experiment():
         sec_fxp = mpc.SecFxp(64)
 
         X_sparse, _user_to_index, _isbn_to_index = extract_dataset()
-        X_sparse = X_sparse[:100, :]
+        X_sparse = X_sparse[:NB_TRAINING_SAMPLES, :]
 
         if mpc.pid == 0:
             samples = random.sample(range(X_sparse.shape[1]), k=10)

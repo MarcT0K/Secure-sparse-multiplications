@@ -74,7 +74,7 @@ async def experiment():
         sec_sparse_model = SecureSparseLogisticRegression(model, sec_fxp)
 
         if mpc.pid == 0:
-            samples = random.sample(range(X_sparse.shape[0]), k=10)
+            samples = random.sample(range(X_sparse.shape[0]), k=50)
         else:
             samples = None
         samples = await mpc.transfer(samples, senders=0)
