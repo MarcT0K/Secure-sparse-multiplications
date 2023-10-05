@@ -34,39 +34,46 @@ def plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=False):
         fig, ax = plt.subplots()
 
         if until_overflow:
-            ax.scatter(
-                dense_mult[f"Nb. {rows_or_col}"].to_numpy()[-1],
-                dense_mult[col].to_numpy()[-1],
-                marker="X",
-                color="red",
-                s=100,
-                zorder=1000,
-                label="Memory overflow",
-            )
-            ax.scatter(
-                sparse_mult_001[f"Nb. {rows_or_col}"].to_numpy()[-1],
-                sparse_mult_001[col].to_numpy()[-1],
-                marker="X",
-                color="red",
-                s=100,
-                zorder=1000,
-            )
-            ax.scatter(
-                sparse_mult_01[f"Nb. {rows_or_col}"].to_numpy()[-1],
-                sparse_mult_01[col].to_numpy()[-1],
-                marker="X",
-                color="red",
-                s=100,
-                zorder=1000,
-            )
-            ax.scatter(
-                sparse_mult_1[f"Nb. {rows_or_col}"].to_numpy()[-1],
-                sparse_mult_1[col].to_numpy()[-1],
-                marker="X",
-                color="red",
-                s=100,
-                zorder=1000,
-            )
+            if until_overflow[0]:
+                ax.scatter(
+                    dense_mult[f"Nb. {rows_or_col}"].to_numpy()[-1],
+                    dense_mult[col].to_numpy()[-1],
+                    marker="X",
+                    color="red",
+                    s=100,
+                    zorder=1000,
+                    label="Memory overflow",
+                )
+
+            if until_overflow[1]:
+                ax.scatter(
+                    sparse_mult_001[f"Nb. {rows_or_col}"].to_numpy()[-1],
+                    sparse_mult_001[col].to_numpy()[-1],
+                    marker="X",
+                    color="red",
+                    s=100,
+                    zorder=1000,
+                )
+
+            if until_overflow[2]:
+                ax.scatter(
+                    sparse_mult_01[f"Nb. {rows_or_col}"].to_numpy()[-1],
+                    sparse_mult_01[col].to_numpy()[-1],
+                    marker="X",
+                    color="red",
+                    s=100,
+                    zorder=1000,
+                )
+
+            if until_overflow[3]:
+                ax.scatter(
+                    sparse_mult_1[f"Nb. {rows_or_col}"].to_numpy()[-1],
+                    sparse_mult_1[col].to_numpy()[-1],
+                    marker="X",
+                    color="red",
+                    s=100,
+                    zorder=1000,
+                )
 
         ax.plot(dense_mult[f"Nb. {rows_or_col}"], dense_mult[col], label="Dense")
         ax.plot(
@@ -212,8 +219,16 @@ def main():
     gen_all_figures("vect_mult", "rows", "Vector length")
     plot_sparse_dense_experiment()
     gen_all_figures(
-        "mat_vect_mult", "columns", "Number of columns and rows", until_overflow=True
+        "mat_vect_mult",
+        "columns",
+        "Number of columns and rows",
+        until_overflow=[True, True, True, True],
     )
-    gen_all_figures("mat_mult", "columns", "Number of columns", until_overflow=True)
+    gen_all_figures(
+        "mat_mult",
+        "columns",
+        "Number of columns",
+        until_overflow=[True, False, False, False],
+    )
 
     plt.close("all")

@@ -306,7 +306,7 @@ def matmult_experiments():
         base_args = [
             "benchmark",
             "-M3",
-            "--no-prss",
+            "--no-prss",  # Reason: https://github.com/lschoe/mpyc/issues/78
             "--benchmark",
             "mat_mult",
             "--seed",
