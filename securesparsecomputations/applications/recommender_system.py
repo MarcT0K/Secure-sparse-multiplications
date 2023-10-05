@@ -31,7 +31,7 @@ CSV_FIELDS = [
 
 def extract_dataset():
     ratings = pd.read_csv(
-        "datasets/BX-Book-Ratings.csv",
+        "../datasets/BX-Book-Ratings.csv",
         sep=";",
         encoding="latin-1",
     )
@@ -236,7 +236,7 @@ async def experiment():
         sec_fxp = mpc.SecFxp(64)
 
         X_sparse, _user_to_index, _isbn_to_index = extract_dataset()
-        X_sparse = X_sparse[:101, :100]
+        X_sparse = X_sparse[:100, :]
 
         if mpc.pid == 0:
             samples = random.sample(range(X_sparse.shape[1]), k=10)

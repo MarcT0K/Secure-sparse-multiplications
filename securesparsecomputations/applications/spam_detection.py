@@ -25,7 +25,7 @@ CSV_FIELDS = [
 
 
 def extract_dataset():
-    df = pd.read_csv("datasets/spam.csv", sep="\t", names=["Label", "Message"])
+    df = pd.read_csv("../datasets/spam.csv", sep="\t", names=["Label", "Message"])
     vect = CountVectorizer(stop_words="english")
     vect.fit(df["Message"])
     X_sparse = vect.fit_transform(df["Message"])

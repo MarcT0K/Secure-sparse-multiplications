@@ -27,11 +27,11 @@ CSV_FIELDS = [
     "Communication cost",
 ]
 
-NB_TRAINING_SAMPLES = 100
+NB_TRAINING_SAMPLES = 1000
 
 
 def extract_dataset():
-    access_log = pd.read_csv("datasets/amazon.csv")
+    access_log = pd.read_csv("../datasets/amazon.csv")
     encoder = OneHotEncoder(sparse_output=True)
 
     label = access_log["ACTION"].to_numpy().reshape(-1, 1)
