@@ -49,7 +49,7 @@ def log_stdout(process):
 
 
 def archive_experiment_results():
-    existing_results = glob.glob("*.csv") + glob.glob("*.log")
+    existing_results = glob.glob("*.csv") + glob.glob("*.log") + glob.glob("*.csv.old")
 
     if not existing_results:
         return
@@ -409,7 +409,7 @@ def clean_csv():
             lines = csv_file.readlines()
 
         with open(fname + ".old", "w", encoding="utf-8") as archive_file:
-            archive_file.writelines(fname)  # Keep the unfiltered version
+            archive_file.writelines(lines)  # Keep the unfiltered version
 
         filtered_lines = [
             lines[i]
