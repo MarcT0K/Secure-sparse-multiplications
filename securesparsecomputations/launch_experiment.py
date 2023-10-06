@@ -392,7 +392,7 @@ def recommender_system_application():
 def access_control_application():
     logger.info("START ACCESS CONTROL EXPERIMENT")
     subp = Popen(
-        ["benchmark_access_control", "-M3"],
+        ["benchmark_access_control", "-M3", "--no-prss"],
         stdout=PIPE,
         stderr=STDOUT,
     )

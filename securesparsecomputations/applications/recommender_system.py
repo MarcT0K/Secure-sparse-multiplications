@@ -141,7 +141,9 @@ def norm_sparse_vector(vect):
 
 def compute_sparse_similarities(inner_products, inv_norms):
     if inner_products.nnz == 0:
-        return inner_products.sectype.array([[0, -1]])  # returns a placeholder
+        return inner_products.sectype.array(
+            np.array([[0, -1]])
+        )  # returns a placeholder
 
     unit_matrix = []
     sparse_coord = inner_products._mat[:, -2]
