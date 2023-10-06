@@ -140,6 +140,9 @@ def norm_sparse_vector(vect):
 
 
 def compute_sparse_similarities(inner_products, inv_norms):
+    if inner_products.nnz == 0:
+        return inner_products.sectype.array([[0, -1]])  # returns a placeholder
+
     unit_matrix = []
     sparse_coord = inner_products._mat[:, -2]
     for i in range(inner_products.nnz):
@@ -166,6 +169,10 @@ class KNNRecommenderSystem:
     async def predict(self, secure_book_id):
         assert isinstance(secure_book_id, SparseVector)
         selected_movie = await self._dataset.dot(secure_book_id)
+        print("Number of nnz in the selected vector:", selected_movie.nnz)
+        # Remark: We could improve the privacy of this protocol and (obliviously)
+        # randomly pad the movie vector during the multiplication to avoid identifying
+        # the movie based on the number of non-zero elements => Possible but out of scope
 
         selected_movie_norm = norm_sparse_vector(selected_movie)
         movie_norms = await norm_sparse_matrix(self._dataset)
