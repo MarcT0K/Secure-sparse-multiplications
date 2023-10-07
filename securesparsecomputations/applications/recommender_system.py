@@ -250,7 +250,7 @@ async def experiment():
         X_sparse = X_sparse[:NB_TRAINING_SAMPLES, :]
 
         if mpc.pid == 0:
-            samples = random.sample(range(X_sparse.shape[1]), k=10)
+            samples = random.sample(range(X_sparse.shape[1]), k=5)
         else:
             samples = None
         samples = await mpc.transfer(samples, senders=0)
