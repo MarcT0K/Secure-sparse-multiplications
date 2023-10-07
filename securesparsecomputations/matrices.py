@@ -404,7 +404,7 @@ async def _matrix_vector_prod(mat, vect) -> SparseVector:
 
             padded_matrix.append(curr_row_mat)
     elif isinstance(mat, SparseMatrixColumn):
-        for j in range(mat.shape[0]):
+        for j in range(mat.shape[1]):
             curr_col = mat.get_column(j)
 
             if curr_col.nnz == 0:

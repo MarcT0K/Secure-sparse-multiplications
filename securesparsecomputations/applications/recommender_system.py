@@ -28,7 +28,7 @@ CSV_FIELDS = [
     "Communication cost",
 ]
 
-NB_TRAINING_SAMPLES = 1000
+NB_TRAINING_SAMPLES = 100
 
 
 def extract_dataset():
