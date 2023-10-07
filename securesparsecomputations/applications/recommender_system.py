@@ -250,7 +250,9 @@ async def experiment():
         X_sparse = X_sparse[:NB_TRAINING_SAMPLES, :]
 
         if mpc.pid == 0:
-            samples = random.sample(range(X_sparse.shape[1]), k=5)
+            samples = random.sample(range(5000), k=5)
+            # The last movies are mostly rated by the last users so we picked among
+            # the first movies to have movies with at least one rating
         else:
             samples = None
         samples = await mpc.transfer(samples, senders=0)
