@@ -119,9 +119,8 @@ async def norm_sparse_matrix(matrix: SparseMatrixRow):  # column-wise
     zero_test = await mpc.np_is_zero_public(
         res[:, 0] + 1
     )  # Here, we leak the number of non-zero elements in the output matrix
-    zero_val_test = await mpc.np_is_zero_public(res[:, -1])
 
-    mask = [i for i, test in enumerate(zero_test) if not test and not zero_val_test[i]]
+    mask = [i for i, test in enumerate(zero_test) if not test]
     final_res = res[mask, :]
 
     public_coord = await mpc.output(final_res[:, 0])
