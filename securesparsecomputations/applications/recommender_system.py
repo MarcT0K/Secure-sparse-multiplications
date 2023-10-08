@@ -59,6 +59,8 @@ def extract_dataset():
 
 def custom_np_reciprocal(vector):
     # NB: MPyC np_reciprocal is not yet working for fixed-point arrays
+    vector += vector.sectype(2 ** (-vector.sectype.frac_length))
+
     res = [mpc._rec(el) for el in mpc.np_tolist(vector)]
     res = mpc.np_reshape(mpc.np_fromlist(res), (vector.shape[0], 1))
     return res
@@ -77,57 +79,39 @@ async def norm_sparse_matrix(matrix: SparseMatrixRow):  # column-wise
     square_val = merged_matrix[:, -1] ** 2
     merged_matrix = mpc.np_hstack((merged_matrix[:, :-1], square_val.reshape(-1, 1)))
 
-    padding_coord = []
-    for i in range(matrix.shape[1]):
-        padding_coord.extend(
-            SecureMatrix.int_to_secure_bits(i, matrix.sectype, matrix.col_bit_length)
-        )
-        padding_coord.append(matrix.sectype(int(i)))
-    padding_coord = mpc.np_reshape(
-        mpc.np_fromlist(padding_coord),
-        (matrix.shape[1], matrix.col_bit_length + 1),
-    )
-    padding_val = matrix.sectype.array(np.zeros((matrix.shape[1], 1)))
-    padding = mpc.np_hstack((padding_coord, padding_val))
-    padded = mpc.np_vstack((merged_matrix, padding))
-
     res = await radix_sort(
-        padded,
+        merged_matrix,
         matrix.col_bit_length,
         already_decomposed=True,
         keep_bin_keys=True,
     )
-    res = padded[:, -2:]
 
     # We compare the integer representation of the column index for all pairs of consecutive elements
-    comp = res[0 : res.shape[0] - 1, 0] == res[1 : res.shape[0], 0]
+    comp = res[0 : res.shape[0] - 1, -2] == res[1 : res.shape[0], -2]
 
     col_val = mpc.np_tolist(res[:, -1])
-    col_i = res[:-1, 0] * (1 - comp) + (-1) * comp
+    col_i = res[:-1, -2] * (1 - comp) + (-1) * comp
     # If the test is false, the value of this column is -1 (i.e., a placeholder)
 
     for i in range(res.shape[0] - 1):
         col_val[i + 1] = col_val[i + 1] + comp[i] * col_val[i]
-    col_i = mpc.np_hstack((col_i, res[-1, 0:1]))
+    col_i = mpc.np_hstack((col_i, res[-1, -2:-1]))
     col_val = mpc.np_reshape(mpc.np_fromlist(col_val), (res.shape[0], 1))
     col_i = mpc.np_reshape(col_i, (res.shape[0], 1))
 
-    res = mpc.np_hstack((col_i, col_val))
+    res = mpc.np_hstack((res[:, :-2], col_i, col_val))
 
     res = await np_shuffle_3PC(res)
 
     zero_test = await mpc.np_is_zero_public(
-        res[:, 0] + 1
+        res[:, -2] + 1
     )  # Here, we leak the number of non-zero elements in the output matrix
+    zero_val_test = await mpc.np_is_zero_public(res[:, -1])
 
-    mask = [i for i, test in enumerate(zero_test) if not test]
+    mask = [i for i, test in enumerate(zero_test) if not test and not zero_val_test[i]]
     final_res = res[mask, :]
 
-    public_coord = await mpc.output(final_res[:, 0])
-    permutation = np.empty_like(public_coord, dtype=int)
-    permutation[public_coord.astype(int)] = np.arange(len(permutation), dtype=int)
-
-    return final_res[permutation, 1]
+    return SparseVector(final_res, sectype=matrix.sectype, shape=(matrix.shape[1], 1))
 
 
 def norm_sparse_vector(vect):
@@ -138,23 +122,38 @@ def norm_sparse_vector(vect):
     return s
 
 
-def compute_sparse_similarities(inner_products, inv_norms):
+async def compute_sparse_similarities(inner_products, inv_norms):
     if inner_products.nnz == 0:
         return inner_products.sectype.array(
             np.array([[0, -1]])
         )  # returns a placeholder
 
-    unit_matrix = []
-    sparse_coord = inner_products._mat[:, -2]
-    for i in range(inner_products.nnz):
-        unit_vector = mpc.np_unit_vector(sparse_coord[i], inv_norms.shape[0])
-        unit_matrix.append(unit_vector)
+    inner_square = mpc.np_hstack(
+        (inner_products._mat[:, :-1], inner_products._mat[:, -1:] ** 2)
+    )
 
-    unit_matrix = mpc.np_vstack(unit_matrix)
-    val_vect = mpc.np_matmul(unit_matrix, inv_norms)
-    similarities = mpc.np_multiply(val_vect, inner_products._mat[i, -1] ** 2)
+    merged_matrix = mpc.np_vstack((inner_square, inv_norms._mat))
 
-    return mpc.np_hstack((similarities, sparse_coord.reshape(-1, 1)))
+    res = await radix_sort(
+        merged_matrix,
+        inner_products.row_bit_length,
+        already_decomposed=True,
+        keep_bin_keys=True,
+    )
+
+    # We compare the integer representation of the column index for all pairs of consecutive elements
+    comp = res[0 : res.shape[0] - 1, -2:-1] == res[1 : res.shape[0], -2:-1]
+    col_val = res[0 : res.shape[0] - 1, -1:] * res[1 : res.shape[0], -1:] * comp
+    res = mpc.np_hstack((res[:-1, :-1], col_val))
+
+    res = await np_shuffle_3PC(res)
+
+    zero_test = await mpc.np_is_zero_public(res[:, -1])
+
+    mask = [i for i, test in enumerate(zero_test) if not test]
+    final_res = res[mask, :]
+
+    return mpc.np_hstack((final_res[:, -1:], final_res[:, -2:-1]))
 
 
 class KNNRecommenderSystem:
@@ -176,17 +175,18 @@ class KNNRecommenderSystem:
         # the movie based on the number of non-zero elements => Possible but out of scope
 
         selected_movie_norm = norm_sparse_vector(selected_movie)
-        movie_norms = await norm_sparse_matrix(self._dataset)
-        movie_norms *= selected_movie_norm
+        norms = await norm_sparse_matrix(self._dataset)
+        norms._mat = mpc.np_hstack(
+            (norms._mat[:, :-1], norms._mat[:, -1:] * selected_movie_norm)
+        )
         # We only compute the square of the cosine similarity to avoid computing a square-root.
         # This trick does no change the KNN output.
 
-        movie_norms += self._sectype(2 ** (-self._sectype.frac_length))
-        # We add a negligible value for robustness (i.e., to avoid divisions by 0)
-        inv_norms = custom_np_reciprocal(movie_norms)
+        inv_vect = custom_np_reciprocal(norms._mat[:, -1])
+        norms._mat = mpc.np_hstack((norms._mat[:, :-1], inv_vect))
 
         movie_inner_products = await self._dataset.transpose().dot(selected_movie)
-        similarities = compute_sparse_similarities(movie_inner_products, inv_norms)
+        similarities = await compute_sparse_similarities(movie_inner_products, norms)
 
         sorted_results = await np_quicksort(similarities, key=lambda tup: tup[0])
         # We use quicksort as it does not require bit decomposition.
@@ -220,8 +220,6 @@ class DenseKNNRecommenderSystem:
         # We only compute the square of the cosine similarity to avoid computing a square-root.
         # This trick does no change the KNN output.
 
-        movie_norms += self._sectype(2 ** (-self._sectype.frac_length))
-        # We add a negligible value for robustness (i.e., to avoid divisions by 0)
         inv_norms = custom_np_reciprocal(movie_norms)
 
         movie_inner_products = self._dataset.transpose().dot(selected_movie)
@@ -249,7 +247,7 @@ async def experiment():
         X_sparse = X_sparse[:NB_TRAINING_SAMPLES, :]
 
         if mpc.pid == 0:
-            samples = random.sample(range(5000), k=5)
+            samples = random.sample(range(101), k=5)
             # The last movies are mostly rated by the last users so we picked among
             # the first movies to have movies with at least one rating
         else:
