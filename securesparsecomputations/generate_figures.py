@@ -223,19 +223,19 @@ def spam_detection_table():
 
     print(r"\begin{tabular}{|c|c|c|c|c|}\hline")
     print(
-        r"\multirow{2}{*}{Algo.} & \multicolumn{2}{|c|}{Secret-sharing} & \multicolumn{2}{|c|}{Online}\\\cline{2-5}"
+        r"\multirow{2}{*}{Algo.} & \multicolumn{2}{|c|}{Comm. cost (bytes)} & \multirow{2}{*}{Runtime (s)}\\\cline{2-3}"
     )
-    print(r"& Time & Comm. & Time & Comm. \\\hline")
+    print(r"& Client & Per-server & \\\hline")
     print(
-        f"Dense & {dense_sharing['Runtime'].mean():.1e} & {dense_sharing['Communication cost'].mean():.1e} & {dense_mult['Runtime'].mean():.1e} & {dense_mult['Communication cost'].mean():.1e} "
+        f"Dense & {dense_sharing['Communication cost'].mean():.1e}  & {(dense_sharing['Communication cost'].mean()+dense_mult['Communication cost'].mean())/3:.1e} & {dense_mult['Runtime'].mean() + dense_sharing['Runtime'].mean():.1e}"
         + r"\\\hline"
     )
     print(
-        f"Sparse-dense & {sparse_dense_sharing['Runtime'].mean():.1e} & {sparse_dense_sharing['Communication cost'].mean():.1e} & {sparse_dense_mult['Runtime'].mean():.1f} & {sparse_dense_mult['Communication cost'].mean():.1e} "
+        f"Sparse-dense & {sparse_dense_sharing['Communication cost'].mean():.1e}  & {(sparse_dense_sharing['Communication cost'].mean()+sparse_dense_mult['Communication cost'].mean())/3:.1e} & {sparse_dense_mult['Runtime'].mean() + sparse_dense_sharing['Runtime'].mean():.1f}"
         + r"\\\hline"
     )
     print(
-        f"Sparse & {sparse_sharing['Runtime'].mean():.1e} & {sparse_sharing['Communication cost'].mean():.1e} & {sparse_mult['Runtime'].mean():.1f} & {sparse_mult['Communication cost'].mean():.1e} "
+        f"Sparse & {sparse_sharing['Communication cost'].mean():.1e}  & {(sparse_sharing['Communication cost'].mean()+sparse_mult['Communication cost'].mean())/3:.1e} & {sparse_mult['Runtime'].mean() + sparse_sharing['Runtime'].mean():.1f}"
         + r"\\\hline"
     )
     print(r"\end{tabular}")
