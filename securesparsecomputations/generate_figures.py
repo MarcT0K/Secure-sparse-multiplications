@@ -75,21 +75,26 @@ def plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=False):
                     zorder=1000,
                 )
 
-        ax.plot(dense_mult[f"Nb. {rows_or_col}"], dense_mult[col], label="Dense")
+        ax.plot(
+            dense_mult[f"Nb. {rows_or_col}"], dense_mult[col], label="Dense", marker="x"
+        )
         ax.plot(
             sparse_mult_001[f"Nb. {rows_or_col}"],
             sparse_mult_001[col],
             label=r"Sparse (99.99\%)",
+            marker="x",
         )
         ax.plot(
             sparse_mult_01[f"Nb. {rows_or_col}"],
             sparse_mult_01[col],
             label=r"Sparse (99.9\%)",
+            marker="x",
         )
         ax.plot(
             sparse_mult_1[f"Nb. {rows_or_col}"],
             sparse_mult_1[col],
             label=r"Sparse (99\%)",
+            marker="x",
         )
 
         ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
@@ -133,21 +138,25 @@ def plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel):
             dense_mult[f"Nb. {rows_or_col}"],
             dense_mult[col].to_numpy() + dense_sharing[col].to_numpy(),
             label="Dense",
+            marker="x",
         )
         ax.plot(
             sparse_mult_001[f"Nb. {rows_or_col}"],
             sparse_mult_001[col].to_numpy() + sparse_sharing_001[col].to_numpy(),
             label=r"Sparse (99.99\%)",
+            marker="x",
         )
         ax.plot(
             sparse_mult_01[f"Nb. {rows_or_col}"],
             sparse_mult_01[col].to_numpy() + sparse_sharing_01[col].to_numpy(),
             label=r"Sparse (99.9\%)",
+            marker="x",
         )
         ax.plot(
             sparse_mult_1[f"Nb. {rows_or_col}"],
             sparse_mult_1[col].to_numpy() + sparse_sharing_1[col].to_numpy(),
             label=r"Sparse (99\%)",
+            marker="x",
         )
         ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
         ax.legend()
@@ -183,16 +192,23 @@ def plot_sparse_dense_experiment(csv_name="sparse_dense_vect_mult"):
     def figure_per_col(col, unit):
         fig, ax = plt.subplots()
 
-        ax.plot(dense_mult["Nb. rows"], dense_mult[col], label="Dense")
+        ax.plot(
+            dense_mult["Nb. rows"],
+            dense_mult[col],
+            label="Dense",
+            marker="x",
+        )
         ax.plot(
             sparse_mult["Nb. rows"],
             sparse_mult[col],
             label="Sparse",
+            marker="x",
         )
         ax.plot(
             sparse_dense_mult["Nb. rows"],
             sparse_dense_mult[col],
             label="Sparse-dense",
+            marker="x",
         )
 
         ax.set(xlabel="Vector length", ylabel=f"{col} ({unit})")
