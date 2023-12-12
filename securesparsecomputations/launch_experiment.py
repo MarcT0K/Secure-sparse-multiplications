@@ -435,7 +435,7 @@ def plaintext_multiplication_comparison():
 
             m_dim = j * 10**i
             print(
-                f"Plaintext benchmark: dimensions=({n_dim},{m_dim}), density={density}"
+                f"Plaintext benchmark: dimensions=({n_dim},{m_dim}), density={density}, algorithm: sparse"
             )
 
             X_sparse = scipy.sparse.random(n_dim, m_dim, density=density, dtype=float)
@@ -460,8 +460,11 @@ def plaintext_multiplication_comparison():
                 except MemoryError:
                     sparse_failed = True
 
+            print(
+                f"Plaintext benchmark: dimensions=({n_dim},{m_dim}), density={density}, algorithm: dense"
+            )
             if dense_failed:
-                logger.warning("Skipped sparse experiments")
+                logger.warning("Skipped dense experiments")
             else:
                 dense_params = {
                     "Nb. rows": n_dim,
