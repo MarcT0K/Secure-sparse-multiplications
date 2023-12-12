@@ -76,7 +76,10 @@ def plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=False):
                 )
 
         ax.plot(
-            dense_mult[f"Nb. {rows_or_col}"], dense_mult[col], label="Dense", marker="x"
+            dense_mult[f"Nb. {rows_or_col}"],
+            dense_mult[col],
+            label="[Baseline] Dense",
+            marker="x",
         )
         ax.plot(
             sparse_mult_001[f"Nb. {rows_or_col}"],
@@ -137,7 +140,7 @@ def plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel):
         ax.plot(
             dense_mult[f"Nb. {rows_or_col}"],
             dense_mult[col].to_numpy() + dense_sharing[col].to_numpy(),
-            label="Dense",
+            label="[Baseline] Dense",
             marker="x",
         )
         ax.plot(
@@ -195,7 +198,7 @@ def plot_sparse_dense_experiment(csv_name="sparse_dense_vect_mult"):
         ax.plot(
             dense_mult["Nb. rows"],
             dense_mult[col],
-            label="Dense",
+            label="[Baseline] Dense",
             marker="x",
         )
         ax.plot(
