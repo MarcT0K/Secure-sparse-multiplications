@@ -5,11 +5,16 @@ import random
 import shutil
 import threading
 import time
+from csv import DictWriter
+from datetime import datetime
 from itertools import product
 from subprocess import PIPE, STDOUT, Popen
 
 import colorlog
 import psutil
+import numpy as np
+import scipy.sparse
+
 
 logger = colorlog.getLogger()
 
@@ -400,6 +405,84 @@ def access_control_application():
     logger.info("FINISHED ACCESS CONTROL EXPERIMENT")
 
 
+def plaintext_multiplication_comparison():
+    logger.info("START PLAINTEXT COMPARISON EXPERIMENT")
+    random.seed(2549421)
+    np.random.seed(2549421)
+
+    with open("plaintext_comparison.csv", "w", encoding="utf-8") as result_file:
+        csv_writer = DictWriter(
+            result_file,
+            [
+                "Timestamp",
+                "Algorithm",
+                "Nb. rows",
+                "Nb. columns",
+                "Density",
+                "Runtime",
+            ],
+        )
+
+        dense_failed = False
+        sparse_failed = False
+
+        density = 0.001
+        n_dim = 100
+        for i, j in product(range(2, 6), range(1, 10, 2)):
+            if sparse_failed and dense_failed:
+                logger.warning("All algorithms failed")
+
+            m_dim = j * 10**i
+
+            X_sparse = scipy.sparse.random(n_dim, m_dim, density=density, dtype=float)
+
+            if sparse_failed:
+                logger.warning("Skipped sparse experiments")
+            else:
+                try:
+                    sparse_params = {
+                        "Nb.rows": n_dim,
+                        "Nb. columns": m_dim,
+                        "Density": density,
+                        "Algorithm": "Sparse",
+                    }
+                    start_ts = datetime.now()
+                    sparse_params["Timestamp"] = start_ts
+                    C_sparse = X_sparse.T @ X_sparse
+                    end_ts = datetime.now()
+                    sparse_params["Runtime"] = (end_ts - start_ts).total_seconds()
+                    csv_writer.writerow(sparse_params)
+                except MemoryError:
+                    sparse_failed = True
+                del C_sparse
+
+            if dense_failed:
+                logger.warning("Skipped sparse experiments")
+            else:
+                dense_params = {
+                    "Nb.rows": n_dim,
+                    "Nb. columns": m_dim,
+                    "Density": density,
+                    "Algorithm": "Dense",
+                }
+                X_dense = X_sparse.todense()
+                del X_sparse
+                try:
+                    start_ts = datetime.now()
+                    dense_params["Timestamp"] = start_ts
+                    C_dense = X_dense.T @ X_dense
+                    end_ts = datetime.now()
+                    dense_params["Runtime"] = (end_ts - start_ts).total_seconds()
+                    csv_writer.writerow(dense_params)
+                except MemoryError:
+                    dense_failed = True
+                del C_dense, X_dense
+
+            del X_sparse
+
+    logger.info("FINISH PLAINTEXT COMPARISON EXPERIMENT")
+
+
 def clean_csv():
     """Removes from the CSV files all lines for experiments that crashed during computation times.
 
@@ -433,13 +516,14 @@ def main():
     setup_logger()
 
     try:
+        plaintext_multiplication_comparison()
         vect_mult_experiments()
         sparse_dense_vect_mult_experiments()
         mat_vect_mult_experiments()
         matmult_experiments()
         spam_detection_application()
-        # recommender_system_application()
-        # access_control_application()
+        recommender_system_application()
+        access_control_application()
     except KeyboardInterrupt:  # To avoid memory leakage
         psutil_proc = psutil.Process(os.getpid())
         for proc in psutil_proc.children(recursive=True):
