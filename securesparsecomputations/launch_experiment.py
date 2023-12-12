@@ -431,6 +431,7 @@ def plaintext_multiplication_comparison():
         for i, j in product(range(2, 6), range(1, 10, 2)):
             if sparse_failed and dense_failed:
                 logger.warning("All algorithms failed")
+                break
 
             m_dim = j * 10**i
 
@@ -477,8 +478,6 @@ def plaintext_multiplication_comparison():
                 except MemoryError:
                     dense_failed = True
                 del C_dense, X_dense
-
-            del X_sparse
 
     logger.info("FINISH PLAINTEXT COMPARISON EXPERIMENT")
 
