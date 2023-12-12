@@ -441,7 +441,7 @@ def plaintext_multiplication_comparison():
             else:
                 try:
                     sparse_params = {
-                        "Nb.rows": n_dim,
+                        "Nb. rows": n_dim,
                         "Nb. columns": m_dim,
                         "Density": density,
                         "Algorithm": "Sparse",
@@ -460,7 +460,7 @@ def plaintext_multiplication_comparison():
                 logger.warning("Skipped sparse experiments")
             else:
                 dense_params = {
-                    "Nb.rows": n_dim,
+                    "Nb. rows": n_dim,
                     "Nb. columns": m_dim,
                     "Density": density,
                     "Algorithm": "Dense",
