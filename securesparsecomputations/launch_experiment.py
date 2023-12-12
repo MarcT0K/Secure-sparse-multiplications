@@ -434,6 +434,9 @@ def plaintext_multiplication_comparison():
                 break
 
             m_dim = j * 10**i
+            print(
+                f"Plaintext benchmark: dimensions=({n_dim},{m_dim}), density={density}"
+            )
 
             X_sparse = scipy.sparse.random(n_dim, m_dim, density=density, dtype=float)
 
