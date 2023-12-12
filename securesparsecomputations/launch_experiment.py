@@ -456,9 +456,9 @@ def plaintext_multiplication_comparison():
                     end_ts = datetime.now()
                     sparse_params["Runtime"] = (end_ts - start_ts).total_seconds()
                     csv_writer.writerow(sparse_params)
+                    del C_sparse
                 except MemoryError:
                     sparse_failed = True
-                del C_sparse
 
             if dense_failed:
                 logger.warning("Skipped sparse experiments")
@@ -478,9 +478,10 @@ def plaintext_multiplication_comparison():
                     end_ts = datetime.now()
                     dense_params["Runtime"] = (end_ts - start_ts).total_seconds()
                     csv_writer.writerow(dense_params)
+                    del C_dense
                 except MemoryError:
                     dense_failed = True
-                del C_dense, X_dense
+                del X_dense
 
     logger.info("FINISH PLAINTEXT COMPARISON EXPERIMENT")
 
