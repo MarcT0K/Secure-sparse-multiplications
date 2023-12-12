@@ -452,7 +452,9 @@ def plaintext_multiplication_comparison():
                     }
                     start_ts = datetime.now()
                     sparse_params["Timestamp"] = start_ts
-                    C_sparse = X_sparse.T @ X_sparse
+                    C_sparse = (
+                        X_sparse.T @ X_sparse.copy()
+                    )  # Copy to match the behavior of dense multiplication (see below)
                     end_ts = datetime.now()
                     sparse_params["Runtime"] = (end_ts - start_ts).total_seconds()
                     csv_writer.writerow(sparse_params)
@@ -477,7 +479,9 @@ def plaintext_multiplication_comparison():
                 try:
                     start_ts = datetime.now()
                     dense_params["Timestamp"] = start_ts
-                    C_dense = X_dense.T @ X_dense
+                    C_dense = X_dense.T @ np.copy(
+                        X_dense
+                    )  # np.copy() to avoid a segfault: https://github.com/numpy/numpy/issues/19685
                     end_ts = datetime.now()
                     dense_params["Runtime"] = (end_ts - start_ts).total_seconds()
                     csv_writer.writerow(dense_params)
