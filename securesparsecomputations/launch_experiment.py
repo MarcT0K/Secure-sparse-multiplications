@@ -422,13 +422,14 @@ def plaintext_multiplication_comparison():
                 "Runtime",
             ],
         )
+        csv_writer.writeheader()
 
         dense_failed = False
         sparse_failed = False
 
         density = 0.001
         n_dim = 100
-        for i, j in product(range(2, 6), range(1, 10, 2)):
+        for i, j in product(range(2, 8), range(1, 10, 2)):
             if sparse_failed and dense_failed:
                 logger.warning("All algorithms failed")
                 break

@@ -183,6 +183,60 @@ def gen_all_figures(csv_name, rows_or_col, xlabel, until_overflow=False):
     plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel)
 
 
+def plot_plaintext_experiment():
+    df = pd.read_csv("../data/plaintext_comparison.csv")
+    dense_mult = df[(df["Algorithm"] == "Dense")]
+    sparse_mult = df[(df["Algorithm"] == "Sparse")]
+
+    dense_overflow = dense_mult["Nb. columns"].iloc[-1] != 9 * 10**7
+    sparse_overflow = sparse_mult["Nb. columns"].iloc[-1] != 9 * 10**7
+
+    fig, ax = plt.subplots()
+
+    if dense_overflow:
+        ax.scatter(
+            dense_mult["Nb. columns"].iloc[-1],
+            dense_mult["Runtime"].iloc[-1],
+            marker="X",
+            color="red",
+            s=100,
+            zorder=1000,
+            label="Memory overflow",
+        )
+
+    if sparse_overflow:
+        ax.scatter(
+            sparse_mult["Nb. columns"].iloc[-1],
+            sparse_mult["Runtime"].iloc[-1],
+            marker="X",
+            color="red",
+            s=100,
+            zorder=1000,
+        )
+
+    ax.plot(
+        dense_mult["Nb. columns"],
+        dense_mult["Runtime"],
+        label="NumPy dense",
+        marker="x",
+    )
+    ax.plot(
+        sparse_mult["Nb. columns"],
+        sparse_mult["Runtime"],
+        label="SciPy sparse",
+        marker="x",
+    )
+
+    ax.set(xlabel="Number of columns", ylabel="Runtime (s)")
+    ax.legend()
+    ax.set_yscale("log")
+    ax.set_xscale("log")
+
+    fig.tight_layout()
+    fig.savefig("plaintext_mult_runtime.png", dpi=400)
+    plt.close(fig)
+
+
 # Sparse-dense plot
 def plot_sparse_dense_experiment(csv_name="sparse_dense_vect_mult"):
     df = pd.read_csv("../data/" + csv_name + ".csv")
@@ -265,6 +319,8 @@ def main():
         os.makedirs("figures")
     os.chdir("figures")
 
+    plot_plaintext_experiment()
+    return
     gen_all_figures("vect_mult", "rows", "Vector length")
     plot_sparse_dense_experiment()
     gen_all_figures(
