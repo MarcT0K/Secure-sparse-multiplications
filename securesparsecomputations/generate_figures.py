@@ -22,6 +22,9 @@ plt.rc(
 )
 plt.rcParams.update(params)
 
+prop_cycle = plt.rcParams["axes.prop_cycle"]
+colors = prop_cycle.by_key()["color"]
+
 
 def plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=False):
     df = pd.read_csv("../data/" + csv_name + ".csv")
@@ -193,8 +196,9 @@ def plot_plaintext_experiment():
 
     fig, ax = plt.subplots()
 
+    overflow_line = None
     if dense_overflow:
-        ax.scatter(
+        overflow_line = ax.scatter(
             dense_mult["Nb. columns"].iloc[-1],
             dense_mult["Runtime"].iloc[-1],
             marker="X",
@@ -214,23 +218,47 @@ def plot_plaintext_experiment():
             zorder=1000,
         )
 
-    ax.plot(
+    (plain_dense,) = ax.plot(
         dense_mult["Nb. columns"],
         dense_mult["Runtime"],
-        label="NumPy dense",
+        label="NumPy plaintext dense",
         marker="x",
     )
-    ax.plot(
+    (plain_sparse,) = ax.plot(
         sparse_mult["Nb. columns"],
         sparse_mult["Runtime"],
-        label="SciPy sparse",
-        marker="x",
+        label="SciPy plaintext sparse",
+        marker="+",
     )
 
+    secure_sparse = ax.axvline(
+        x=2 * 10**6,
+        label="Memory overflow\n(our MPC sparse alg.)",
+        linestyle="--",
+        color=colors[2],
+    )  # HARDCODED BASED ON THE OTHER EXPERIMENTS
+    secure_dense = ax.axvline(
+        x=10**3,
+        label="Memory overflow\n(MPC dense alg.)",
+        linestyle="-",
+        color=colors[5],
+    )  # HARDCODED BASED ON THE OTHER EXPERIMENTS
+
     ax.set(xlabel="Number of columns", ylabel="Runtime (s)")
-    ax.legend()
+    plain_lines = (
+        [plain_sparse, plain_dense]
+        if overflow_line is None
+        else [plain_sparse, plain_dense, overflow_line]
+    )
+    secure_lines = [secure_sparse, secure_dense]
+    legend1 = ax.legend(handles=plain_lines, loc=2, prop={"size": 13})
+    ax.add_artist(legend1)
+    legend2 = ax.legend(handles=secure_lines, loc=4, prop={"size": 13})
+    ax.add_artist(legend2)
     ax.set_yscale("log")
     ax.set_xscale("log")
+    ax.set_ylim(top=10**3)
+    ax.set_xlim(right=10**8)
 
     fig.tight_layout()
     fig.savefig("plaintext_mult_runtime.png", dpi=400)
@@ -338,3 +366,6 @@ def main():
     plt.close("all")
 
     spam_detection_table()
+
+
+main()
