@@ -232,14 +232,14 @@ def plot_plaintext_experiment():
     )
 
     secure_sparse = ax.axvline(
-        x=2 * 10**6,
-        label="Memory overflow\n(our MPC sparse alg.)",
+        x=10**6,
+        label="Memory overflow with\nour MPC sparse alg.",
         linestyle="--",
         color=colors[2],
     )  # HARDCODED BASED ON THE OTHER EXPERIMENTS
     secure_dense = ax.axvline(
         x=10**3,
-        label="Memory overflow\n(MPC dense alg.)",
+        label="Memory overflow with\nclassic MPC dense alg.",
         linestyle="-",
         color=colors[5],
     )  # HARDCODED BASED ON THE OTHER EXPERIMENTS
@@ -348,20 +348,19 @@ def main():
     os.chdir("figures")
 
     plot_plaintext_experiment()
-    return
     gen_all_figures("vect_mult", "rows", "Vector length")
     plot_sparse_dense_experiment()
     gen_all_figures(
         "mat_vect_mult",
         "columns",
         "Number of columns and rows",
-        until_overflow=[True, True, True, True],
+        until_overflow=[True, True, True, True],  # HARCODED
     )
     gen_all_figures(
         "mat_mult",
         "columns",
         "Number of columns",
-        until_overflow=[True, False, False, False],
+        until_overflow=[True, False, False, False],  # HARDCODED
     )
     plt.close("all")
 
