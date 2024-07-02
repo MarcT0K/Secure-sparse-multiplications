@@ -301,7 +301,7 @@ def plot_sparse_dense_experiment(csv_name="sparse_dense_vect_mult"):
         ax.set_yscale("log")
         ax.set_xscale("log")
 
-        fig.tight_layout()
+        # TODOfig.tight_layout()
         fig.savefig(
             f"{csv_name}_mult_{col.lower().replace(' ', '_')}.png",
             dpi=400,
@@ -367,4 +367,5 @@ def main():
     spam_detection_table()
 
 
-main()
+if __name__ == "__main__":
+    main()
