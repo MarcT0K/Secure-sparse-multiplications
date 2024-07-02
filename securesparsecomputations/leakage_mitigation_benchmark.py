@@ -58,16 +58,6 @@ class PerRowLeakage:
         bytes_count = 2 * self._nb_nnz_per_row * unit_byte_size
         return bytes_count.sum()
 
-    def repeating_ratio(self):
-        nnz_dict = {}
-        for nnz_count in self._nb_nnz_per_row:
-            nnz_dict[nnz_count] = nnz_dict.get(nnz_count, 0) + 1
-
-        non_repeating = [
-            nnz_count for nnz_count, repetition in nnz_dict.items() if repetition == 1
-        ]
-        return 1 - len(non_repeating) / len(self._nb_nnz_per_row)
-
     def inverse_uniqueness(self):
         set_nnz_per_row = set(self._nb_nnz_per_row.tolist())
         return 1 / len(set_nnz_per_row)
@@ -129,21 +119,14 @@ def benchmark():
     # Storage cost
     no_mitigation_cost = {}
     threshold_10_cost = {}
-    threshold_50_cost = {}
+    threshold_100_cost = {}
     threshold_max_cost = {}
     dense_cost = {}
-
-    # Non-repeat ratio
-    no_mitigation_repeat = {}
-    threshold_10_repeat = {}
-    threshold_50_repeat = {}
-    threshold_max_repeat = {}
-    dense_repeat = {}
 
     # Uniqueness ratio
     no_mitigation_unique = {}
     threshold_10_unique = {}
-    threshold_50_unique = {}
+    threshold_100_unique = {}
     threshold_max_unique = {}
     dense_unique = {}
 
@@ -154,22 +137,18 @@ def benchmark():
 
         matrix_no_mitigation = PerRowLeakage.from_scipy_sparse(dataset)
         no_mitigation_cost[name] = matrix_no_mitigation.storage_cost()
-        no_mitigation_repeat[name] = matrix_no_mitigation.repeating_ratio()
         no_mitigation_unique[name] = matrix_no_mitigation.inverse_uniqueness()
 
         padded_matrix = matrix_no_mitigation.threshold_padding(10)
         threshold_10_cost[name] = padded_matrix.storage_cost()
-        threshold_10_repeat[name] = padded_matrix.repeating_ratio()
         threshold_10_unique[name] = padded_matrix.inverse_uniqueness()
 
-        padded_matrix = matrix_no_mitigation.threshold_padding(50)
-        threshold_50_cost[name] = padded_matrix.storage_cost()
-        threshold_50_repeat[name] = padded_matrix.repeating_ratio()
-        threshold_50_unique[name] = padded_matrix.inverse_uniqueness()
+        padded_matrix = matrix_no_mitigation.threshold_padding(100)
+        threshold_100_cost[name] = padded_matrix.storage_cost()
+        threshold_100_unique[name] = padded_matrix.inverse_uniqueness()
 
         padded_matrix = matrix_no_mitigation.max_padding()
         threshold_max_cost[name] = padded_matrix.storage_cost()
-        threshold_max_repeat[name] = padded_matrix.repeating_ratio()
         threshold_max_unique[name] = padded_matrix.inverse_uniqueness()
 
         dense_cost[name] = (
@@ -177,7 +156,6 @@ def benchmark():
             * matrix_no_mitigation.matrix_shape[1]
             * 8
         )
-        dense_repeat[name] = 1
         dense_unique[name] = 1
 
     print("\nPreparing the plots...")
@@ -187,7 +165,7 @@ def benchmark():
 
     no_mitigation = list(no_mitigation_cost.values())
     threshold_10 = list(threshold_10_cost.values())
-    threshold_50 = list(threshold_50_cost.values())
+    threshold_100 = list(threshold_100_cost.values())
     threshold_max = list(threshold_max_cost.values())
     dense = list(dense_cost.values())
 
@@ -211,10 +189,10 @@ def benchmark():
     )
     rects3 = ax.bar(
         x,
-        threshold_50,
+        threshold_100,
         width,
         capsize=4,
-        label="Padding threshold 50",
+        label="Padding threshold 100",
     )
     rects4 = ax.bar(
         x + width,
@@ -242,74 +220,12 @@ def benchmark():
     ax.set_yscale("log")
     fig.savefig("leakage_mitigation_cost.png", dpi=400)
 
-    # Plot 2: Non-repeating
-    labels = list(no_mitigation_repeat.keys())
-
-    no_mitigation = list(no_mitigation_repeat.values())
-    threshold_10 = list(threshold_10_repeat.values())
-    threshold_50 = list(threshold_50_repeat.values())
-    threshold_max = list(threshold_max_repeat.values())
-    dense = list(dense_repeat.values())
-
-    x = np.arange(len(labels))  # the label locations
-    width = 0.15  # the width of the bars
-
-    fig, ax = plt.subplots()
-    rects1 = ax.bar(
-        x - 2 * width,
-        no_mitigation,
-        width,
-        capsize=4,
-        label="No mitigation",
-    )
-    rects2 = ax.bar(
-        x - width,
-        threshold_10,
-        width,
-        capsize=4,
-        label="Padding threshold 10",
-    )
-    rects3 = ax.bar(
-        x,
-        threshold_50,
-        width,
-        capsize=4,
-        label="Padding threshold 50",
-    )
-    rects4 = ax.bar(
-        x + width,
-        threshold_max,
-        width,
-        capsize=4,
-        label="Padding max",
-    )
-    rects5 = ax.bar(
-        x + 2 * width,
-        dense,
-        width,
-        capsize=4,
-        label="Dense",
-    )
-
-    # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set(
-        xlabel="Dataset",
-        ylabel=r"Ratio of repeating nnz number\\(higher == more private)",
-    )
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.legend(loc="upper left")
-    fig.tight_layout()
-    ax.set_axisbelow(True)
-    ax.yaxis.grid(color="gray", linestyle="dashed")
-    fig.savefig("leakage_mitigation_repeat.png", dpi=400)
-
     # Plot 2: uniqueness
     labels = list(no_mitigation_unique.keys())
 
     no_mitigation = list(no_mitigation_unique.values())
     threshold_10 = list(threshold_10_unique.values())
-    threshold_50 = list(threshold_50_unique.values())
+    threshold_100 = list(threshold_100_unique.values())
     threshold_max = list(threshold_max_unique.values())
     dense = list(dense_unique.values())
 
@@ -333,10 +249,10 @@ def benchmark():
     )
     rects3 = ax.bar(
         x,
-        threshold_50,
+        threshold_100,
         width,
         capsize=4,
-        label="Padding threshold 50",
+        label="Padding threshold 100",
     )
     rects4 = ax.bar(
         x + width,
@@ -354,14 +270,14 @@ def benchmark():
     )
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set(xlabel="Dataset", ylabel=r"Inverse uniqueness\\(higher == more private)")
+    ax.set(xlabel="Dataset", ylabel=r"Inverse uniqueness\\(higher = more private)")
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.legend(loc="upper left")
     fig.tight_layout()
     ax.set_axisbelow(True)
     ax.yaxis.grid(color="gray", linestyle="dashed")
-    fig.savefig("leakage_mitigation_unique.png", dpi=400)
+    fig.savefig("leakage_mitigation_uniqueness.png", dpi=400)
 
 
 if __name__ == "__main__":
