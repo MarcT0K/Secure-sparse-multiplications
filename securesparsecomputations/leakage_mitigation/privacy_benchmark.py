@@ -26,7 +26,7 @@ class TupleFormat:
         list_matrix = []
         for row_id in range(sp_matrix.shape[0]):
             row = sp_matrix[row_id, :].tocoo()
-            list_row = [(row.data[i], row.col[i]) for i in range(len(row))]
+            list_row = [(row.col[i], row.data[i]) for i in range(row.getnnz())]
             list_matrix.append(list_row)
         return TupleFormat(list_matrix, sp_matrix.shape)
 
@@ -39,7 +39,7 @@ class TupleFormat:
         nnz_ind = [ind for ind, _val in row]
         zero_ind = set(range(row_size)).difference(nnz_ind)
 
-        dummies = random.sample(zero_ind, nb_dummies)
+        dummies = random.sample(list(zero_ind), nb_dummies)
         for ind_dummy in dummies:
             padded_row.append((ind_dummy, 0))
         return padded_row
@@ -68,9 +68,20 @@ class TupleFormat:
             total_bit_size += 2 * unit_bit_size * len(row)
         return total_bit_size
 
-    def non_repeating_ratio(self): ...  # TODO
+    def non_repeating_ratio(self):
+        nnz_per_row = [len(row) for row in self._mat]
+        nnz_dict = {}
+        for nnz_count in nnz_per_row:
+            nnz_dict[nnz_count] = nnz_dict.get(nnz_count, 0) + 1
 
-    def uniqueness_ratio(self): ...  # TODO
+        non_repeating = [
+            nnz_count for nnz_count, repetition in nnz_dict.items() if repetition == 1
+        ]
+        return len(non_repeating) / len(self._mat)
+
+    def uniqueness_ratio(self):
+        set_nnz_per_row = set([len(row) for row in self._mat])
+        return len(set_nnz_per_row) / len(self._mat)
 
 
 def extract_access_dataset():
