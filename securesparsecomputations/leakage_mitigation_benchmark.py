@@ -15,6 +15,7 @@ params = {
     "grid.linestyle": "dashed",
     "grid.alpha": 0.7,
     "scatter.marker": "x",
+    "text.latex.preamble": r"\usepackage{amsmath}",
 }
 plt.style.use("seaborn-v0_8-colorblind")
 plt.rc(
@@ -24,6 +25,12 @@ plt.rc(
         + cycler("linestyle", ["-", "--", "-.", ":", "-", "-"])
     ),
 )
+
+texture_1 = {"hatch": "/"}
+texture_2 = {"hatch": "\\"}
+texture_3 = {"hatch": "."}
+texture_4 = {"hatch": "x"}
+texture_5 = {"hatch": "o"}
 plt.rcParams.update(params)
 
 prop_cycle = plt.rcParams["axes.prop_cycle"]
@@ -45,6 +52,7 @@ class PerRowLeakage:
 
     def threshold_padding(self, threshold) -> "PerRowLeakage":
         nb_nnz_padded = np.ceil(self._nb_nnz_per_row / threshold) * threshold
+        nb_nnz_padded[nb_nnz_padded > self.matrix_shape[1]] = self.matrix_shape[1]
         return PerRowLeakage(nb_nnz_padded, self.matrix_shape)
 
     def max_padding(self) -> "PerRowLeakage":
@@ -173,47 +181,41 @@ def benchmark():
     width = 0.15  # the width of the bars
 
     fig, ax = plt.subplots()
+    fig.set_figwidth(7)
     rects1 = ax.bar(
         x - 2 * width,
         no_mitigation,
         width,
         capsize=4,
         label="No mitigation",
+        **texture_1,
     )
     rects2 = ax.bar(
         x - width,
         threshold_10,
         width,
         capsize=4,
-        label="Padding threshold 10",
+        label="Padding $p=10$",
+        **texture_2,
     )
     rects3 = ax.bar(
-        x,
-        threshold_100,
-        width,
-        capsize=4,
-        label="Padding threshold 100",
+        x, threshold_100, width, capsize=4, label="Padding $p=100$", **texture_3
     )
     rects4 = ax.bar(
         x + width,
         threshold_max,
         width,
         capsize=4,
-        label="Padding max",
+        label="Padding $p=\\text{max}$",
+        **texture_4,
     )
-    rects5 = ax.bar(
-        x + 2 * width,
-        dense,
-        width,
-        capsize=4,
-        label="Dense",
-    )
+    rects5 = ax.bar(x + 2 * width, dense, width, capsize=4, label="Dense", **texture_5)
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set(xlabel="Dataset", ylabel="Memory footprint (B)")
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
-    ax.legend(loc="upper left")
+    ax.legend(loc="upper left", prop={"size": 12}, framealpha=0.98)
     fig.tight_layout()
     ax.set_axisbelow(True)
     ax.yaxis.grid(color="gray", linestyle="dashed")
@@ -233,50 +235,44 @@ def benchmark():
     width = 0.15  # the width of the bars
 
     fig, ax = plt.subplots()
+    fig.set_figwidth(7)
     rects1 = ax.bar(
         x - 2 * width,
         no_mitigation,
         width,
         capsize=4,
         label="No mitigation",
+        **texture_1,
     )
     rects2 = ax.bar(
         x - width,
         threshold_10,
         width,
         capsize=4,
-        label="Padding threshold 10",
+        label="Padding $p=10$",
+        **texture_2,
     )
     rects3 = ax.bar(
-        x,
-        threshold_100,
-        width,
-        capsize=4,
-        label="Padding threshold 100",
+        x, threshold_100, width, capsize=4, label="Padding $p=100$", **texture_3
     )
     rects4 = ax.bar(
         x + width,
         threshold_max,
         width,
         capsize=4,
-        label="Padding max",
+        label="Padding $p=\\text{max}$",
+        **texture_4,
     )
-    rects5 = ax.bar(
-        x + 2 * width,
-        dense,
-        width,
-        capsize=4,
-        label="Dense",
-    )
+    rects5 = ax.bar(x + 2 * width, dense, width, capsize=4, label="Dense", **texture_5)
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set(xlabel="Dataset", ylabel=r"Inverse uniqueness\\(higher = more private)")
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
-    ax.legend(loc="upper left")
-    fig.tight_layout()
+    ax.legend(loc="lower right", prop={"size": 12}, framealpha=0.98)
     ax.set_axisbelow(True)
     ax.yaxis.grid(color="gray", linestyle="dashed")
+    fig.tight_layout()
     fig.savefig("leakage_mitigation_uniqueness.png", dpi=400)
 
 
