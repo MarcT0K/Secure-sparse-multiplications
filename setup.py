@@ -3,9 +3,9 @@ from setuptools import setup, find_packages
 setup(
     name="securesparsecomputations",
     version="1.0",
-    description="Codebase used in the paper Damie et al. 'Secure sparse matrix multiplications and their applications to PPML'",
-    author="Marc DAMIE",
-    author_email="marc.damie@inria.fr",
+    description="Codebase used in the paper'Secure sparse matrix multiplications and their applications to PPML'",
+    author="[anonymous]",
+    author_email="[anonymous]",
     license="MIT",
     packages=find_packages(),
     python_requires=">=3.9",
