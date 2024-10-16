@@ -272,6 +272,7 @@ def benchmark():
     ax.legend(loc="lower right", prop={"size": 12}, framealpha=0.98)
     ax.set_axisbelow(True)
     ax.yaxis.grid(color="gray", linestyle="dashed")
+    ax.set_yscale("log")
     fig.tight_layout()
     fig.savefig("leakage_mitigation_uniqueness.png", dpi=400)
 
