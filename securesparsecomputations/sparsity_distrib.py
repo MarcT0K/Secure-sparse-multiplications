@@ -174,6 +174,9 @@ def plot_sparsity_distribution(sparse_dataset, dataset_name):
     plt.plot(nnz, density)
     plt.yscale("log")
     plt.xscale("log")
+
+    if min_nnz_plot == 0:
+        min_nnz_plot = 1  # To avoid warning with logarithmic scale
     plt.xlim(min_nnz_plot, max_nnz_plot)
     plt.xlabel(
         f"Non-zeros per row (Row size= ${sci_notation(sparse_dataset.shape[1])}$)",
