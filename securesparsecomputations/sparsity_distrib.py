@@ -1,8 +1,31 @@
+from cycler import cycler
 import matplotlib.pyplot as plt
 import pandas as pd
 import scipy.sparse
 
 from sklearn.feature_extraction.text import CountVectorizer
+
+params = {
+    "text.usetex": True,
+    "font.size": 15,
+    "axes.labelsize": 25,
+    "axes.grid": True,
+    "grid.linestyle": "dashed",
+    "grid.alpha": 0.7,
+    "scatter.marker": "x",
+}
+plt.style.use("seaborn-v0_8-colorblind")
+plt.rc(
+    "axes",
+    prop_cycle=(
+        plt.rcParams["axes.prop_cycle"]
+        + cycler("linestyle", ["-", "--", "-.", ":", "-", "-"])
+    ),
+)
+plt.rcParams.update(params)
+
+prop_cycle = plt.rcParams["axes.prop_cycle"]
+colors = prop_cycle.by_key()["color"]
 
 
 def extract_bookcrossing_dataset():
@@ -141,14 +164,23 @@ def plot_sparsity_distribution(sparse_dataset, dataset_name):
     assert min_nnz_plot is not None and max_nnz_plot is not None
     assert max_nnz_plot > min_nnz_plot
 
+    def sci_notation(number, sig_fig=2):
+        ret_string = "{0:.{1:d}e}".format(number, sig_fig)
+        a, b = ret_string.split("e")
+        # remove leading "+" and strip leading zeros
+        b = int(b)
+        return a + "\\times 10^" + str(b)
+
     plt.plot(nnz, density)
     plt.yscale("log")
     plt.xscale("log")
-    print(min_nnz_plot, max_nnz_plot)
     plt.xlim(min_nnz_plot, max_nnz_plot)
-    plt.xlabel(f"Number of non-zeros per row (Row size= {sparse_dataset.shape[1]})")
-    plt.ylabel("Proportion")
-    plt.title("Pre-row sparsity distribution in " + dataset_name)
+    plt.xlabel(
+        f"Non-zeros per row (Row size= ${sci_notation(sparse_dataset.shape[1])}$)",
+        fontsize=18,
+    )
+    plt.ylabel("Proportion of rows with more than $x$ ", fontsize=18)
+    plt.tight_layout()
     plt.savefig("../figures/sparsity_distrib_" + dataset_name.lower() + ".png")
     plt.close()
 
