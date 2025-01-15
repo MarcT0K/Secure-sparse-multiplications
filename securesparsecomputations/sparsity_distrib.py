@@ -80,43 +80,73 @@ def extract_dorothea_dataset():
 def plot_sparsity_distribution(sparse_dataset, dataset_name):
     sparsity_distrib = (sparse_dataset != 0).sum(axis=1)
 
-    curr_density = (sparsity_distrib > 0).mean()
-    density = [curr_density]
-    nnz = [0]
+    curr_density = (sparsity_distrib >= 0).mean()
+    density = []
+    nnz = []
     curr_nnz = 0
 
     max_nnz = sparse_dataset.shape[1]
     max_nnz_density = (sparsity_distrib >= max_nnz).mean()
-    while curr_nnz != max_nnz:
-        next_nnz = max_nnz
-        min_next_nnz = curr_nnz
-        density_min_nnz = (sparsity_distrib > min_next_nnz).mean()
-        density_next_nnz = max_nnz_density
-        while min_next_nnz + 1 != next_nnz:
-            mid_nnz = (next_nnz + min_next_nnz + 1) // 2
+    while max_nnz > curr_nnz:
+        nnz.append(curr_nnz)
+        density.append(curr_density)
+
+        lower_bound_next_nnz = curr_nnz
+        upper_bound_next_nnz = max_nnz
+        density_lower_bound = curr_density
+        density_upper_bound = max_nnz_density
+
+        # Find the highest nnz with the same density as the current nnz
+        while lower_bound_next_nnz != upper_bound_next_nnz:  # Binary search
+            if lower_bound_next_nnz == upper_bound_next_nnz - 1:
+                if density_upper_bound == curr_density:
+                    lower_bound_next_nnz = upper_bound_next_nnz
+                else:
+                    upper_bound_next_nnz = lower_bound_next_nnz
+                continue
+
+            mid_nnz = (lower_bound_next_nnz + upper_bound_next_nnz) // 2
             density_mid_nnz = (sparsity_distrib > mid_nnz).mean()
-            if density_mid_nnz == density_min_nnz:
-                min_next_nnz = mid_nnz
-                density_min_nnz = density_mid_nnz
+            if density_mid_nnz == density_lower_bound:
+                lower_bound_next_nnz = mid_nnz
+                density_lower_bound = density_mid_nnz
             else:
-                next_nnz = mid_nnz
-                density_next_nnz = density_mid_nnz
+                upper_bound_next_nnz = mid_nnz
+                density_upper_bound = density_mid_nnz
+
+        next_nnz = lower_bound_next_nnz + 1
+        next_nnz_density = (sparsity_distrib > next_nnz).mean()
 
         for i in range(curr_nnz + 1, next_nnz):
             nnz.append(i)
             density.append(curr_density)
 
-        nnz.append(next_nnz)
-        density.append(density_next_nnz)
-
-        curr_density = density_next_nnz
+        curr_density = next_nnz_density
         curr_nnz = next_nnz
+
+    assert nnz == list(range(max_nnz + 1))  # Consistency check
+    assert len(density) == len(nnz)
+
+    # Bounds the x-axis to focus on the
+    min_nnz_plot = None
+    max_nnz_plot = None
+    for i in range(len(nnz)):
+        if density[i] == 1.0:
+            min_nnz_plot = nnz[i]
+
+        if density[i] == 0.0 and max_nnz_plot is None:
+            # Works because the density is by definition sorted
+            max_nnz_plot = nnz[i]
+
+    assert min_nnz_plot is not None and max_nnz_plot is not None
+    assert max_nnz_plot > min_nnz_plot
 
     plt.plot(nnz, density)
     plt.yscale("log")
     plt.xscale("log")
-    plt.xlim(1, max_nnz)
-    plt.xlabel("Number of non-zeros per row")
+    print(min_nnz_plot, max_nnz_plot)
+    plt.xlim(min_nnz_plot, max_nnz_plot)
+    plt.xlabel(f"Number of non-zeros per row (Row size= {sparse_dataset.shape[1]})")
     plt.ylabel("Proportion")
     plt.title("Pre-row sparsity distribution in " + dataset_name)
     plt.savefig("../figures/sparsity_distrib_" + dataset_name.lower() + ".png")
