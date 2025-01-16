@@ -534,14 +534,18 @@ async def _matrix_vector_prod(mat, vect) -> SparseVector:
     return SparseVector(final_res, sectype=mat.sectype, shape=(mat.shape[0], 1))
 
 
-def from_scipy_sparse_mat(sparse_mat: ScipySparseMatType, sectype, leakage_axis=0):
-    assert leakage_axis in [0, 1]
+def from_scipy_sparse_mat(
+    sparse_mat: ScipySparseMatType, sectype, public_knowledge_axis=0
+):
+    assert public_knowledge_axis in [0, 1]
 
     secure_mat = []
     sparse_mat = sparse_mat.tocsr()
-    for i in range(sparse_mat.shape[leakage_axis]):
-        curr_vect = sparse_mat[i, :].T if leakage_axis == 0 else sparse_mat[:, i]
+    for i in range(sparse_mat.shape[public_knowledge_axis]):
+        curr_vect = (
+            sparse_mat[i, :].T if public_knowledge_axis == 0 else sparse_mat[:, i]
+        )
         secure_mat.append(from_scipy_sparse_vect(curr_vect, sectype))
 
-    retcls = SparseMatrixRow if leakage_axis == 0 else SparseMatrixColumn
+    retcls = SparseMatrixRow if public_knowledge_axis == 0 else SparseMatrixColumn
     return retcls(secure_mat, sparse_mat.shape, sectype)

@@ -272,7 +272,7 @@ async def benchmark_mat_vector_mult(exp_env, n_dim, density, alg_choice=None):
     if alg_choice in ["*", "sparse"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = from_scipy_sparse_mat(X_sparse, secfxp, leakage_axis=0)
+            sec_x = from_scipy_sparse_mat(X_sparse, secfxp, public_knowledge_axis=0)
             sec_y = from_scipy_sparse_vect(y_sparse, secfxp)
 
         params["Algorithm"] = "Sparse"
@@ -328,8 +328,10 @@ async def benchmark_sparse_sparse_mat_mult(
     if alg_choice in ["sparse", "*"]:
         params["Algorithm"] = "Sparse sharing"
         async with exp_env.benchmark(params):
-            sec_x = from_scipy_sparse_mat(X_sparse.transpose(), secfxp, leakage_axis=1)
-            sec_y = from_scipy_sparse_mat(X_sparse, secfxp, leakage_axis=0)
+            sec_x = from_scipy_sparse_mat(
+                X_sparse.transpose(), secfxp, public_knowledge_axis=1
+            )
+            sec_y = from_scipy_sparse_mat(X_sparse, secfxp, public_knowledge_axis=0)
 
         params["Algorithm"] = "Sparse"
         async with exp_env.benchmark(params):

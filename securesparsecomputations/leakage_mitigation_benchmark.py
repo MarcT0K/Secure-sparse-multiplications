@@ -37,7 +37,7 @@ prop_cycle = plt.rcParams["axes.prop_cycle"]
 colors = prop_cycle.by_key()["color"]
 
 
-class PerRowLeakage:
+class PerRowKnowledge:
     def __init__(self, nb_nnz_array, shape):
         assert nb_nnz_array.shape == (shape[0],)
         self.matrix_shape = shape
@@ -45,21 +45,24 @@ class PerRowLeakage:
 
     @staticmethod
     def from_scipy_sparse(sp_matrix):
-        leakage_list = (sp_matrix != 0).sum(axis=1).ravel()
-        leakage_list = np.array(leakage_list)[0]
-        assert leakage_list.shape[0] == sp_matrix.shape[0]
-        return PerRowLeakage(leakage_list, sp_matrix.shape)
+        public_knowledge_list = (sp_matrix != 0).sum(axis=1).ravel()
+        public_knowledge_list = np.array(public_knowledge_list)[0]
+        assert public_knowledge_list.shape[0] == sp_matrix.shape[0]
+        return PerRowKnowledge(public_knowledge_list, sp_matrix.shape)
 
-    def threshold_padding(self, threshold) -> "PerRowLeakage":
+    def threshold_padding(self, threshold) -> "PerRowKnowledge":
         nb_nnz_padded = np.ceil(self._nb_nnz_per_row / threshold) * threshold
         nb_nnz_padded[nb_nnz_padded > self.matrix_shape[1]] = self.matrix_shape[1]
-        return PerRowLeakage(nb_nnz_padded, self.matrix_shape)
+        return PerRowKnowledge(nb_nnz_padded, self.matrix_shape)
 
-    def max_padding(self) -> "PerRowLeakage":
+    def max_padding(self) -> "PerRowKnowledge":
         max_nnz = self._nb_nnz_per_row.max()
-        return PerRowLeakage(
+        return PerRowKnowledge(
             np.array([max_nnz] * len(self._nb_nnz_per_row)), self.matrix_shape
         )
+
+    def matrix_templating(self, nb_data_owners) -> "PerRowKnowledge":
+        raise NotImplementedError
 
     def storage_cost(self):
         unit_byte_size = 8
@@ -143,7 +146,7 @@ def benchmark():
         print(f"Benchmarking {name} dataset...")
         dataset = extraction()
 
-        matrix_no_mitigation = PerRowLeakage.from_scipy_sparse(dataset)
+        matrix_no_mitigation = PerRowKnowledge.from_scipy_sparse(dataset)
         no_mitigation_cost[name] = matrix_no_mitigation.storage_cost()
         no_mitigation_unique[name] = matrix_no_mitigation.inverse_uniqueness()
 
@@ -220,7 +223,7 @@ def benchmark():
     ax.set_axisbelow(True)
     ax.yaxis.grid(color="gray", linestyle="dashed")
     ax.set_yscale("log")
-    fig.savefig("leakage_mitigation_cost.png", dpi=400)
+    fig.savefig("public_knowledge_minimization_cost.png", dpi=400)
 
     # Plot 2: uniqueness
     labels = list(no_mitigation_unique.keys())
@@ -266,7 +269,7 @@ def benchmark():
     rects5 = ax.bar(x + 2 * width, dense, width, capsize=4, label="Dense", **texture_5)
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set(xlabel="Dataset", ylabel=r"Inverse uniqueness\\(higher = more private)")
+    ax.set(xlabel="Dataset", ylabel="Inverse uniqueness")
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.legend(loc="lower right", prop={"size": 12}, framealpha=0.98)
@@ -274,7 +277,7 @@ def benchmark():
     ax.yaxis.grid(color="gray", linestyle="dashed")
     ax.set_yscale("log")
     fig.tight_layout()
-    fig.savefig("leakage_mitigation_uniqueness.png", dpi=400)
+    fig.savefig("public_knowledge_minimization_uniqueness.png", dpi=400)
 
 
 if __name__ == "__main__":
