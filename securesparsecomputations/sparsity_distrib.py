@@ -79,15 +79,6 @@ def extract_movielens_dataset():
     return sparse_mat
 
 
-def extract_spam_dataset():
-    df = pd.read_csv("../datasets/spam.csv", sep="\t", names=["Label", "Message"])
-    vect = CountVectorizer(stop_words="english")
-    vect.fit(df["Message"])
-    sparse_mat = vect.fit_transform(df["Message"])
-    y = df.Label.map({"ham": 0, "spam": 1})
-    return sparse_mat
-
-
 def extract_dorothea_dataset():
     sparse_mat = scipy.sparse.dok_matrix((1950, 10**5), dtype=int)
     with open("../datasets/dorothea.data", "r") as dorothea_file:
@@ -194,12 +185,6 @@ def main():
     print("Dorothea extracted")
     plot_sparsity_distribution(dataset, "Dorothea")
     print("End Dorothea dataset.")
-
-    print("Start Spam dataset analysis...")
-    dataset = extract_spam_dataset()
-    print("Dataset extracted")
-    plot_sparsity_distribution(dataset, "Spam")
-    print("End Spam dataset.")
 
     print("Start Movielens analysis...")
     dataset = extract_movielens_dataset()
