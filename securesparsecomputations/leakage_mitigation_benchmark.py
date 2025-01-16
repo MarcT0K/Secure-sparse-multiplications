@@ -55,6 +55,11 @@ class PerRowKnowledge:
         nb_nnz_padded[nb_nnz_padded > self.matrix_shape[1]] = self.matrix_shape[1]
         return PerRowKnowledge(nb_nnz_padded, self.matrix_shape)
 
+    def row_anonymization(self) -> "PerRowKnowledge":
+        nnz = self._nb_nnz_per_row.copy()
+        np.random.shuffle(nnz)
+        return PerRowKnowledge(nnz, self.matrix_shape)
+
     def max_padding(self) -> "PerRowKnowledge":
         max_nnz = self._nb_nnz_per_row.max()
         return PerRowKnowledge(
@@ -62,6 +67,8 @@ class PerRowKnowledge:
         )
 
     def matrix_templating(self, nb_data_owners) -> "PerRowKnowledge":
+        quantiles = np.quantile(self._nb_nnz_per_row, [0.25, 0.5, 0.75, 0.9, 0.99, 1.0])
+
         raise NotImplementedError
 
     def storage_cost(self):
@@ -224,60 +231,6 @@ def benchmark():
     ax.yaxis.grid(color="gray", linestyle="dashed")
     ax.set_yscale("log")
     fig.savefig("public_knowledge_minimization_cost.png", dpi=400)
-
-    # Plot 2: uniqueness
-    labels = list(no_mitigation_unique.keys())
-
-    no_mitigation = list(no_mitigation_unique.values())
-    threshold_10 = list(threshold_10_unique.values())
-    threshold_100 = list(threshold_100_unique.values())
-    threshold_max = list(threshold_max_unique.values())
-    dense = list(dense_unique.values())
-
-    x = np.arange(len(labels))  # the label locations
-    width = 0.15  # the width of the bars
-
-    fig, ax = plt.subplots()
-    fig.set_figwidth(7)
-    rects1 = ax.bar(
-        x - 2 * width,
-        no_mitigation,
-        width,
-        capsize=4,
-        label="No mitigation",
-        **texture_1,
-    )
-    rects2 = ax.bar(
-        x - width,
-        threshold_10,
-        width,
-        capsize=4,
-        label="Padding $p=10$",
-        **texture_2,
-    )
-    rects3 = ax.bar(
-        x, threshold_100, width, capsize=4, label="Padding $p=100$", **texture_3
-    )
-    rects4 = ax.bar(
-        x + width,
-        threshold_max,
-        width,
-        capsize=4,
-        label="Padding $p=\\text{max}$",
-        **texture_4,
-    )
-    rects5 = ax.bar(x + 2 * width, dense, width, capsize=4, label="Dense", **texture_5)
-
-    # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set(xlabel="Dataset", ylabel="Inverse uniqueness")
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.legend(loc="lower right", prop={"size": 12}, framealpha=0.98)
-    ax.set_axisbelow(True)
-    ax.yaxis.grid(color="gray", linestyle="dashed")
-    ax.set_yscale("log")
-    fig.tight_layout()
-    fig.savefig("public_knowledge_minimization_uniqueness.png", dpi=400)
 
 
 if __name__ == "__main__":
