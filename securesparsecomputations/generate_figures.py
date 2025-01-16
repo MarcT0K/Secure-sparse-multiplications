@@ -2,6 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 from cycler import cycler
+from typing import List, Optional
 
 params = {
     "text.usetex": True,
@@ -26,17 +27,17 @@ prop_cycle = plt.rcParams["axes.prop_cycle"]
 colors = prop_cycle.by_key()["color"]
 
 
-def plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=False):
+def plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=None):
     df = pd.read_csv("../data/" + csv_name + ".csv")
     dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.001)]
     sparse_mult_001 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.0001)]
     sparse_mult_01 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.001)]
     sparse_mult_1 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.01)]
 
-    def figure_per_col(col, unit, until_overflow=False):
+    def figure_per_col(col, unit, until_overflow=None):
         fig, ax = plt.subplots()
 
-        if until_overflow:
+        if until_overflow is not None:
             if until_overflow[0]:
                 ax.scatter(
                     dense_mult[f"Nb. {rows_or_col}"].to_numpy()[-1],
@@ -181,7 +182,9 @@ def plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel):
     figure_per_col("Communication cost", "bytes")
 
 
-def gen_all_figures(csv_name, rows_or_col, xlabel, until_overflow=False):
+def gen_all_figures(
+    csv_name, rows_or_col, xlabel, until_overflow: Optional[List[bool]] = None
+):
     plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=until_overflow)
     plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel)
 
