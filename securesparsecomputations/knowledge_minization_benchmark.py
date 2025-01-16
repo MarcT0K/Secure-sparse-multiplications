@@ -220,8 +220,11 @@ def benchmark():
         padded_matrix = matrix_no_mitigation.max_padding()
         padding_cost[name] = padded_matrix.storage_cost()
 
-        padded_matrix = matrix_no_mitigation.matrix_templating()
-        templating_cost[name] = padded_matrix.storage_cost()
+        templating_cost_list = []
+        for _i in range(100):
+            padded_matrix = matrix_no_mitigation.matrix_templating()
+            templating_cost_list.append(padded_matrix.storage_cost())
+        templating_cost[name] = sum(templating_cost_list) / len(templating_cost_list)
 
         dense_cost[name] = (
             matrix_no_mitigation.matrix_shape[0]
