@@ -25,7 +25,6 @@ setup(
             "run_all_experiments = securesparsecomputations.launch_experiment:main",
             "generate_all_figures = securesparsecomputations.generate_figures:main",
             "benchmark = securesparsecomputations.benchmark:run",
-            "benchmark_spam_detection = securesparsecomputations.applications.spam_detection:run",
             "benchmark_recommender = securesparsecomputations.applications.recommender_system:run",
             "benchmark_access_control = securesparsecomputations.applications.access_control:run",
         ],

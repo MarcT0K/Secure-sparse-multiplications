@@ -372,17 +372,6 @@ def matmult_experiments():
     logger.info("FINISHED ALL MATRIX-MATRIX MULTIPLICATION EXPERIMENTS")
 
 
-def spam_detection_application():
-    logger.info("START SPAM DETECTION EXPERIMENT")
-    subp = Popen(
-        ["benchmark_spam_detection", "-M3"],
-        stdout=PIPE,
-        stderr=STDOUT,
-    )
-    track_memory(subp)
-    logger.info("FINISHED SPAM DETECTION EXPERIMENT")
-
-
 def recommender_system_application():
     logger.info("START RECOMMENDER SYSTEM EXPERIMENT")
     subp = Popen(
@@ -532,7 +521,6 @@ def main():
         sparse_dense_vect_mult_experiments()
         mat_vect_mult_experiments()
         matmult_experiments()
-        spam_detection_application()
         recommender_system_application()
         access_control_application()
     except KeyboardInterrupt:  # To avoid memory leakage

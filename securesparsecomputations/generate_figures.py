@@ -312,36 +312,6 @@ def plot_sparse_dense_experiment(csv_name="sparse_dense_vect_mult"):
     figure_per_col("Communication cost", "bytes")
 
 
-def spam_detection_table():
-    df = pd.read_csv("../data/spam_detection.csv")
-
-    dense_mult = df[df["Algorithm"] == "Dense"]
-    dense_sharing = df[df["Algorithm"] == "Dense sharing"]
-    sparse_mult = df[df["Algorithm"] == "Sparse"]
-    sparse_sharing = df[df["Algorithm"] == "Sparse sharing"]
-    sparse_dense_mult = df[df["Algorithm"] == "Sparse-dense"]
-    sparse_dense_sharing = df[df["Algorithm"] == "Sparse-dense sharing"]
-
-    print(r"\begin{tabular}{|c|c|c|c|c|}\hline")
-    print(
-        r"\multirow{2}{*}{Algo.} & \multicolumn{2}{|c|}{Comm. cost (bytes)} & \multirow{2}{*}{Runtime (s)}\\\cline{2-3}"
-    )
-    print(r"& Client & Per-server & \\\hline")
-    print(
-        f"Dense & {dense_sharing['Communication cost'].mean():.1e}  & {(dense_sharing['Communication cost'].mean()+dense_mult['Communication cost'].mean())/3:.1e} & {dense_mult['Runtime'].mean() + dense_sharing['Runtime'].mean():.1e}"
-        + r"\\\hline"
-    )
-    print(
-        f"Sparse-dense & {sparse_dense_sharing['Communication cost'].mean():.1e}  & {(sparse_dense_sharing['Communication cost'].mean()+sparse_dense_mult['Communication cost'].mean())/3:.1e} & {sparse_dense_mult['Runtime'].mean() + sparse_dense_sharing['Runtime'].mean():.1f}"
-        + r"\\\hline"
-    )
-    print(
-        f"Sparse & {sparse_sharing['Communication cost'].mean():.1e}  & {(sparse_sharing['Communication cost'].mean()+sparse_mult['Communication cost'].mean())/3:.1e} & {sparse_mult['Runtime'].mean() + sparse_sharing['Runtime'].mean():.1f}"
-        + r"\\\hline"
-    )
-    print(r"\end{tabular}")
-
-
 def main():
     if not os.path.exists("figures"):
         os.makedirs("figures")
@@ -363,8 +333,6 @@ def main():
         until_overflow=[True, False, False, False],  # HARDCODED
     )
     plt.close("all")
-
-    spam_detection_table()
 
 
 if __name__ == "__main__":
