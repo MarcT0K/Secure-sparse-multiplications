@@ -114,7 +114,7 @@ class PerRowKnowledge:
     def storage_cost(self):
         unit_byte_size = 8
         bytes_count = 2 * self._nb_nnz_per_row * unit_byte_size
-        return bytes_count.sum()
+        return bytes_count.sum() / 10**6  # Output MB
 
     def inverse_uniqueness(self):
         set_nnz_per_row = set(self._nb_nnz_per_row.tolist())
@@ -230,6 +230,7 @@ def benchmark():
             matrix_no_mitigation.matrix_shape[0]
             * matrix_no_mitigation.matrix_shape[1]
             * 8
+            / 10**6
         )
 
     print("\nPreparing the plot...")
@@ -251,7 +252,7 @@ def benchmark():
         no_mitigation,
         width,
         capsize=4,
-        label="No knowledge minimization",
+        label="No minimization",
         **texture_1,
     )
     rects2 = ax.bar(
@@ -262,7 +263,7 @@ def benchmark():
         label="Row anonymization",
         **texture_2,
     )
-    rects3 = ax.bar(x, padding, width, capsize=4, label="Row padding", **texture_3)
+    rects3 = ax.bar(x, padding, width, capsize=4, label="Max-row padding", **texture_3)
     rects4 = ax.bar(
         x + width,
         templating,
@@ -276,7 +277,7 @@ def benchmark():
     )
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set(xlabel="Dataset", ylabel="Memory footprint (B)")
+    ax.set(xlabel="Dataset", ylabel="Memory footprint (MB)")
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.legend(loc="upper left", prop={"size": 12}, framealpha=0.98)
