@@ -170,7 +170,7 @@ def extract_movielens_dataset():
     ratings = pd.read_csv(
         "../datasets/movielens.csv",
     )
-    ratings = ratings[: 10**7]  # TODO: remove after debugging
+    ratings = ratings[: 10**7]
     ratings.columns = ["userId", "movieId", "rating", "timestamp"]
 
     user_set = ratings.userId.unique()

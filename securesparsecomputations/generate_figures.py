@@ -37,159 +37,89 @@ def plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=None):
     sparse_mult_01 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.001)]
     sparse_mult_1 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.01)]
 
-    def figure_per_col(col, unit, until_overflow=None):
-        fig, ax = plt.subplots()
+    col = "Communication cost"
+    unit = "bytes"
 
-        if until_overflow is not None:
-            if until_overflow[0]:
-                ax.scatter(
-                    dense_mult[f"Nb. {rows_or_col}"].to_numpy()[-1],
-                    dense_mult[col].to_numpy()[-1],
-                    marker="X",
-                    color="red",
-                    s=100,
-                    zorder=1000,
-                    label="Memory overflow",
-                )
+    fig, ax = plt.subplots()
 
-            if until_overflow[1]:
-                ax.scatter(
-                    sparse_mult_001[f"Nb. {rows_or_col}"].to_numpy()[-1],
-                    sparse_mult_001[col].to_numpy()[-1],
-                    marker="X",
-                    color="red",
-                    s=100,
-                    zorder=1000,
-                )
+    if until_overflow is not None:
+        if until_overflow[0]:
+            ax.scatter(
+                dense_mult[f"Nb. {rows_or_col}"].to_numpy()[-1],
+                dense_mult[col].to_numpy()[-1],
+                marker="X",
+                color="red",
+                s=100,
+                zorder=1000,
+                label="Memory overflow",
+            )
 
-            if until_overflow[2]:
-                ax.scatter(
-                    sparse_mult_01[f"Nb. {rows_or_col}"].to_numpy()[-1],
-                    sparse_mult_01[col].to_numpy()[-1],
-                    marker="X",
-                    color="red",
-                    s=100,
-                    zorder=1000,
-                )
+        if until_overflow[1]:
+            ax.scatter(
+                sparse_mult_001[f"Nb. {rows_or_col}"].to_numpy()[-1],
+                sparse_mult_001[col].to_numpy()[-1],
+                marker="X",
+                color="red",
+                s=100,
+                zorder=1000,
+            )
 
-            if until_overflow[3]:
-                ax.scatter(
-                    sparse_mult_1[f"Nb. {rows_or_col}"].to_numpy()[-1],
-                    sparse_mult_1[col].to_numpy()[-1],
-                    marker="X",
-                    color="red",
-                    s=100,
-                    zorder=1000,
-                )
+        if until_overflow[2]:
+            ax.scatter(
+                sparse_mult_01[f"Nb. {rows_or_col}"].to_numpy()[-1],
+                sparse_mult_01[col].to_numpy()[-1],
+                marker="X",
+                color="red",
+                s=100,
+                zorder=1000,
+            )
 
-        ax.plot(
-            dense_mult[f"Nb. {rows_or_col}"],
-            dense_mult[col],
-            label="[Baseline] Dense",
-            marker="x",
-        )
-        ax.plot(
-            sparse_mult_001[f"Nb. {rows_or_col}"],
-            sparse_mult_001[col],
-            label=r"Sparse (99.99\%)",
-            marker="x",
-        )
-        ax.plot(
-            sparse_mult_01[f"Nb. {rows_or_col}"],
-            sparse_mult_01[col],
-            label=r"Sparse (99.9\%)",
-            marker="x",
-        )
-        ax.plot(
-            sparse_mult_1[f"Nb. {rows_or_col}"],
-            sparse_mult_1[col],
-            label=r"Sparse (99\%)",
-            marker="x",
-        )
+        if until_overflow[3]:
+            ax.scatter(
+                sparse_mult_1[f"Nb. {rows_or_col}"].to_numpy()[-1],
+                sparse_mult_1[col].to_numpy()[-1],
+                marker="X",
+                color="red",
+                s=100,
+                zorder=1000,
+            )
 
-        ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
-        ax.legend()
-        ax.set_yscale("log")
-        ax.set_xscale("log")
+    ax.plot(
+        dense_mult[f"Nb. {rows_or_col}"],
+        dense_mult[col],
+        label="[Baseline] Dense",
+        marker="x",
+    )
+    ax.plot(
+        sparse_mult_001[f"Nb. {rows_or_col}"],
+        sparse_mult_001[col],
+        label=r"Sparse (99.99\%)",
+        marker="x",
+    )
+    ax.plot(
+        sparse_mult_01[f"Nb. {rows_or_col}"],
+        sparse_mult_01[col],
+        label=r"Sparse (99.9\%)",
+        marker="x",
+    )
+    ax.plot(
+        sparse_mult_1[f"Nb. {rows_or_col}"],
+        sparse_mult_1[col],
+        label=r"Sparse (99\%)",
+        marker="x",
+    )
 
-        fig.tight_layout()
-        fig.savefig(
-            f"{csv_name}_mult_{col.lower().replace(' ', '_')}.png",
-            dpi=400,
-        )
-        plt.close(fig)
+    ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
+    ax.legend()
+    ax.set_yscale("log")
+    ax.set_xscale("log")
 
-    figure_per_col("Runtime", "s", until_overflow)
-    figure_per_col("Communication cost", "bytes", until_overflow)
-
-
-def plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel):
-    df = pd.read_csv("../data/" + csv_name + ".csv")
-    dense_mult = df[(df["Algorithm"] == "Dense") & (df["Density"] == 0.001)]
-    sparse_mult_001 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.0001)]
-    sparse_mult_01 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.001)]
-    sparse_mult_1 = df[(df["Algorithm"] == "Sparse") & (df["Density"] == 0.01)]
-
-    dense_sharing = df[(df["Algorithm"] == "Dense sharing") & (df["Density"] == 0.001)]
-    sparse_sharing_001 = df[
-        (df["Algorithm"] == "Sparse sharing") & (df["Density"] == 0.0001)
-    ]
-    sparse_sharing_01 = df[
-        (df["Algorithm"] == "Sparse sharing") & (df["Density"] == 0.001)
-    ]
-    sparse_sharing_1 = df[
-        (df["Algorithm"] == "Sparse sharing") & (df["Density"] == 0.01)
-    ]
-
-    def figure_per_col(col, unit):
-        fig, ax = plt.subplots()
-
-        ax.plot(
-            dense_mult[f"Nb. {rows_or_col}"],
-            dense_mult[col].to_numpy() + dense_sharing[col].to_numpy(),
-            label="[Baseline] Dense",
-            marker="x",
-        )
-        ax.plot(
-            sparse_mult_001[f"Nb. {rows_or_col}"],
-            sparse_mult_001[col].to_numpy() + sparse_sharing_001[col].to_numpy(),
-            label=r"Sparse (99.99\%)",
-            marker="x",
-        )
-        ax.plot(
-            sparse_mult_01[f"Nb. {rows_or_col}"],
-            sparse_mult_01[col].to_numpy() + sparse_sharing_01[col].to_numpy(),
-            label=r"Sparse (99.9\%)",
-            marker="x",
-        )
-        ax.plot(
-            sparse_mult_1[f"Nb. {rows_or_col}"],
-            sparse_mult_1[col].to_numpy() + sparse_sharing_1[col].to_numpy(),
-            label=r"Sparse (99\%)",
-            marker="x",
-        )
-        ax.set(xlabel=xlabel, ylabel=f"{col} ({unit})")
-        ax.legend()
-
-        ax.set_yscale("log")
-        ax.set_xscale("log")
-
-        fig.tight_layout()
-        fig.savefig(
-            f"{csv_name}_mult_and_sharing_{col.lower().replace(' ', '_')}.png",
-            dpi=400,
-        )
-        plt.close(fig)
-
-    figure_per_col("Runtime", "s")
-    figure_per_col("Communication cost", "bytes")
-
-
-def gen_all_figures(
-    csv_name, rows_or_col, xlabel, until_overflow: Optional[List[bool]] = None
-):
-    plot_mult_experiment(csv_name, rows_or_col, xlabel, until_overflow=until_overflow)
-    plot_mult_and_sharing_experiment(csv_name, rows_or_col, xlabel)
+    fig.tight_layout()
+    fig.savefig(
+        f"{csv_name}_mult_{col.lower().replace(' ', '_')}.png",
+        dpi=400,
+    )
+    plt.close(fig)
 
 
 def plot_plaintext_experiment():
@@ -277,13 +207,13 @@ def main():
     os.chdir("figures")
 
     plot_plaintext_experiment()
-    gen_all_figures(
+    plot_mult_experiment(
         "mat_vect_mult",
         "columns",
         "Number of columns and rows",
         until_overflow=[True, True, True, True],  # HARCODED
     )
-    gen_all_figures(
+    plot_mult_experiment(
         "mat_mult",
         "columns",
         "Number of columns",
