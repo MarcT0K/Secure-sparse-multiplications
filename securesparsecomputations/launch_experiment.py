@@ -1,3 +1,5 @@
+"""This script launches all the experiments benchmarking our sparse matrix multiplications"""
+
 import glob
 import logging
 import os
@@ -100,123 +102,6 @@ def track_memory(
 
     log_thread.join()
     return killed
-
-
-def vect_mult_experiments():
-    logger.info("START VECTOR MULTIPLICATION EXPERIMENTS")
-    dense_failed = False
-    sparse_failed = False
-    for i, j, density in product(range(4, 7), range(1, 10, 2), [0.0001, 0.001, 0.01]):
-        if dense_failed and sparse_failed:
-            logger.warning("Both algorithms failed")
-            break
-
-        seed = generate_seed()
-        nb_rows = j * 10**i
-        base_args = [
-            "benchmark",
-            "-M3",
-            "--benchmark",
-            "vect_mult",
-            "--seed",
-            str(seed),
-            "--nb-rows",
-            str(nb_rows),
-            "--density",
-            str(density),
-        ]
-        logger.info(
-            "Vector multiplication experiment: seed=%d, dimensions=%d, density=%.4f",
-            seed,
-            nb_rows,
-            density,
-        )
-
-        if not dense_failed:
-            subp = Popen(
-                base_args + ["--algo", "dense"],
-                stdout=PIPE,
-                stderr=STDOUT,
-            )
-            dense_failed = track_memory(subp)
-        else:
-            logger.warning("Skipped dense experiments")
-
-        if not sparse_failed:
-            subp = Popen(
-                base_args + ["--algo", "sparse"],
-                stdout=PIPE,
-                stderr=STDOUT,
-            )
-            sparse_failed = track_memory(subp)
-        else:
-            logger.warning("Skipped sparse experiments")
-
-    logger.info("FINISHED ALL VECTOR MULTIPLICATION EXPERIMENTS")
-
-
-def sparse_dense_vect_mult_experiments():
-    logger.info("START SPARSE-DENSE VECTOR MULTIPLICATION EXPERIMENTS")
-    dense_failed = False
-    sparse_failed = False
-    sparse_dense_failed = False
-    for i, j, density in product(range(4, 6), range(1, 10, 2), [0.0001]):
-        if dense_failed and sparse_failed and sparse_dense_failed:
-            logger.warning("All algorithms failed")
-            break
-
-        seed = generate_seed()
-        nb_rows = j * 10**i
-        base_args = [
-            "benchmark",
-            "-M3",
-            "--benchmark",
-            "sparse_dense_vect_mult",
-            "--seed",
-            str(seed),
-            "--nb-rows",
-            str(nb_rows),
-            "--density",
-            str(density),
-        ]
-        logger.info(
-            "Vector multiplication experiment: seed=%d, dimensions=%d, density=%.4f",
-            seed,
-            nb_rows,
-            density,
-        )
-
-        if not dense_failed:
-            subp = Popen(
-                base_args + ["--algo", "dense"],
-                stdout=PIPE,
-                stderr=STDOUT,
-            )
-            dense_failed = track_memory(subp)
-        else:
-            logger.warning("Skipped dense experiments")
-
-        if not sparse_failed:
-            subp = Popen(
-                base_args + ["--algo", "sparse"],
-                stdout=PIPE,
-                stderr=STDOUT,
-            )
-            sparse_failed = track_memory(subp)
-        else:
-            logger.warning("Skipped sparse experiments")
-
-        if not sparse_dense_failed:
-            subp = Popen(
-                base_args + ["--algo", "sparse-dense"],
-                stdout=PIPE,
-                stderr=STDOUT,
-            )
-            sparse_dense_failed = track_memory(subp)
-        else:
-            logger.warning("Skipped sparse-dense experiments")
-
-    logger.info("FINISHED ALL SPARSE-DENSE VECTOR MULTIPLICATION EXPERIMENTS")
 
 
 def mat_vect_mult_experiments():
@@ -517,8 +402,6 @@ def main():
 
     try:
         plaintext_multiplication_comparison()
-        vect_mult_experiments()
-        sparse_dense_vect_mult_experiments()
         mat_vect_mult_experiments()
         matmult_experiments()
         recommender_system_application()
