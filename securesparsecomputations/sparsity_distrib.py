@@ -179,7 +179,7 @@ def plot_sparsity_distribution(sparse_dataset, dataset_name):
     plt.close()
 
 
-def main():
+def sparsity_distribution_plots():
     print("Start Dorothea dataset analysis...")
     dataset = extract_dorothea_dataset()
     print("Dorothea extracted")
@@ -200,4 +200,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sparsity_distribution_plots()

@@ -199,7 +199,7 @@ DATASET_DICT = {
 }
 
 
-def benchmark():
+def knowledge_minimization_benchmark():
     # Storage cost
     no_mitigation_cost = {}
     anonymization_cost = {}
@@ -289,4 +289,4 @@ def benchmark():
 
 
 if __name__ == "__main__":
-    benchmark()
+    knowledge_minimization_benchmark()

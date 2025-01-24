@@ -4,6 +4,9 @@ import pandas as pd
 from cycler import cycler
 from typing import List, Optional
 
+from .knowledge_minization import knowledge_minimization_benchmark
+from .sparsity_distrib import sparsity_distribution_plots
+
 params = {
     "text.usetex": True,
     "font.size": 15,
@@ -287,6 +290,9 @@ def main():
         until_overflow=[True, False, False, False],  # HARDCODED
     )
     plt.close("all")
+
+    knowledge_minimization_benchmark()
+    sparsity_distribution_plots()
 
 
 if __name__ == "__main__":
