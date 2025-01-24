@@ -1,10 +1,7 @@
-"""Implementation of the oblivious sort by Hamada et al. (2014)
+"""Implementation of the oblivious radix sort by Hamada et al. (2014)
 
 URL: https://eprint.iacr.org/2014/121
 """
-
-import math
-import random
 
 from mpyc.runtime import mpc
 

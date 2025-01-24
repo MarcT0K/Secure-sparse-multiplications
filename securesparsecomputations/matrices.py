@@ -1,3 +1,5 @@
+"""Module providing various secret-shared matrices."""
+
 import math
 from abc import abstractmethod
 from typing import List, Optional, Tuple, Union
@@ -12,7 +14,9 @@ from .resharing import np_shuffle_3PC
 ScipySparseMatType = scipy.sparse._coo.coo_matrix
 
 
-class SecureMatrix:
+class SecretSharedMatrix:
+    """Abstract class for any secret-shared matrix."""
+
     _mat = None
     shape: Tuple[int, int]
 
@@ -35,6 +39,7 @@ class SecureMatrix:
 
     @abstractmethod
     def dot(self, other):
+        """Matrix multiplication."""
         raise NotImplementedError
 
     async def print(self):
@@ -44,7 +49,9 @@ class SecureMatrix:
 ## DENSE CLASSES
 
 
-class DenseMatrix(SecureMatrix):
+class DenseMatrix(SecretSharedMatrix):
+    """Dense secret-shared matrix with constant-cost vector multiplication"""
+
     def __init__(self, mat, sectype=None):
         shape = (
             (len(mat), len(mat[0])) if isinstance(mat, mpc.SecureArray) else mat.shape
@@ -73,6 +80,8 @@ class DenseMatrix(SecureMatrix):
 
 
 class DenseVector(DenseMatrix):
+    """Dense secret-shared vector with constant-cost vector multiplication"""
+
     def __init__(self, mat, sectype=None):
         if mat.shape[1] != 1 and mat.shape[0] != 1:
             raise ValueError("Input must be a vector")
@@ -126,7 +135,12 @@ def from_numpy_dense_matrix(dense_matrix, sectype) -> Union[DenseMatrix, DenseVe
 ## SPARSE CLASSES
 
 
-class SparseVector(SecureMatrix):
+class SparseVector(SecretSharedMatrix):
+    """Sparse secret-shared vector with sorting-based vector multiplication.
+
+    Public knowledge: number of non-zeros in the vector.
+    """
+
     def __init__(self, sparse_mat: Optional[mpc.SecureArray], shape, sectype=None):
         assert isinstance(sparse_mat, mpc.SecureArray) or sparse_mat is None
 
@@ -180,7 +194,9 @@ def from_scipy_sparse_vect(sparse_vect, sectype):
     secure_mat = []
 
     for i, _j, v in zip(sparse_vect.row, sparse_vect.col, sparse_vect.data):
-        secure_mat.extend(SecureMatrix.int_to_secure_bits(i, sectype, row_bit_length))
+        secure_mat.extend(
+            SecretSharedMatrix.int_to_secure_bits(i, sectype, row_bit_length)
+        )
         secure_mat.append(sectype(int(i)))
         secure_mat.append(sectype(float(v)))
 
@@ -199,7 +215,12 @@ def from_scipy_sparse_vect(sparse_vect, sectype):
     return SparseVector(secure_mat, sparse_vect.shape, sectype)
 
 
-class SparseMatrixCOO(SecureMatrix):
+class SparseMatrixCOO(SecretSharedMatrix):
+    """Sparse secret-shared matrix stored as a list of non-zero tuples.
+
+    Public knowledge: number of non-zeros in the matrix.
+    """
+
     def __init__(
         self,
         sparse_mat: List[
@@ -227,7 +248,12 @@ class SparseMatrixCOO(SecureMatrix):
             )
 
 
-class SparseMatrixColumn(SecureMatrix):
+class SparseMatrixColumn(SecretSharedMatrix):
+    """Sparse secret-shared matrix stored as a list of sparse vector (column-wise).
+
+    Public knowledge: number of non-zeros per column.
+    """
+
     def __init__(self, list_of_secure_arrays, shape, sectype=None):
         super().__init__(sectype, shape)
         self._mat = list_of_secure_arrays
@@ -340,7 +366,12 @@ class SparseMatrixColumn(SecureMatrix):
         return SparseMatrixRow(self._mat, (self.shape[1], self.shape[0]), self.sectype)
 
 
-class SparseMatrixRow(SecureMatrix):
+class SparseMatrixRow(SecretSharedMatrix):
+    """Sparse secret-shared matrix stored as a list of sparse vector (row-wise).
+
+    Public knowledge: number of non-zeros per row.
+    """
+
     def __init__(self, list_of_secure_arrays, shape, sectype=None):
         super().__init__(sectype, shape)
         self._mat = list_of_secure_arrays
@@ -366,6 +397,7 @@ class SparseMatrixRow(SecureMatrix):
 
 
 async def _matrix_vector_prod(mat, vect) -> SparseVector:
+    """Utility function performing the multiplication of a sparse matrix with a sparse vector."""
     assert isinstance(vect, SparseVector)
 
     if vect.nnz == 0:
@@ -382,7 +414,9 @@ async def _matrix_vector_prod(mat, vect) -> SparseVector:
                 continue
 
             bin_row_ind = (
-                SecureMatrix.int_to_secure_bits(i, mat.sectype, mat.row_bit_length)
+                SecretSharedMatrix.int_to_secure_bits(
+                    i, mat.sectype, mat.row_bit_length
+                )
                 * curr_row.nnz
             )
             bin_row_ind = mpc.np_reshape(
@@ -411,7 +445,9 @@ async def _matrix_vector_prod(mat, vect) -> SparseVector:
                 continue
 
             bin_col_ind = (
-                SecureMatrix.int_to_secure_bits(j, mat.sectype, mat.col_bit_length)
+                SecretSharedMatrix.int_to_secure_bits(
+                    j, mat.sectype, mat.col_bit_length
+                )
                 * curr_col.nnz
             )
             bin_col_ind = mpc.np_reshape(
@@ -537,6 +573,7 @@ async def _matrix_vector_prod(mat, vect) -> SparseVector:
 def from_scipy_sparse_mat(
     sparse_mat: ScipySparseMatType, sectype, public_knowledge_axis=0
 ):
+    """Shares a SciPy sparse matrix to build a secret-shared sparse matrix."""
     assert public_knowledge_axis in [0, 1]
 
     secure_mat = []

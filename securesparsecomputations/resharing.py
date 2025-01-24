@@ -2,7 +2,6 @@ import asyncio
 import os
 import pickle
 import random
-from datetime import datetime
 
 import numpy as np
 from mpyc import asyncoro, finfields, sectypes, thresha
